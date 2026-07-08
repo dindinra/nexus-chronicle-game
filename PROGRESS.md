@@ -55,6 +55,10 @@
     - CORS: dari awal sudah benar (`FRONTEND_URL=http://localhost:5173` di `.env` sudah masuk `allow_origins`). Diperkuat: tambah `http://127.0.0.1:5173` + default port backend disamakan **8001 → 8000** di `backend/main.py` (sesuai ekspektasi user).
     - Verifikasi browser (http://127.0.0.1:5173/cards): render **22 kartu + 6 fusion**, **0 error CORS/network** di console. **20 gambar** unit+fusion load dari `http://localhost:8000/static/cards/...`; 8 "broken" = kartu attack/tactic/trap (memang `img:""` di `cards.json`, bukan kegagalan serving).
     - `npm run build` lolos (tsc -b + vite build, 31 modules). Backend jalan di :8000, Vite dev di 127.0.0.1:5173 (IPv4 — hindari mismatch IPv6 `::1` saat browser).
+  - [x] 6.5 Halaman Login terhubung JWT — **SELESAI & terverifikasi** (2026-07-08)
+    - API client diperkuat: token (localStorage) + header `Authorization: Bearer` otomatis di `fetchJson`, plus `postJson` untuk POST (`src/api/client.ts`). Modul auth baru (`src/api/auth.ts`: `login`/`register`/`getMe`). `Login.tsx` di-rewrite: form login/register, simpan JWT, panggil `/auth/me` untuk verifikasi identity.
+    - Verifikasi browser (http://127.0.0.1:5173/login): register user → login → token JWT (HS256) tersimpan → `GET /auth/me` return `hermes_test (id 3)`. **0 error** CORS/network di console.
+    - `npm run build` lolos (tsc -b + vite build, 32 modules).
 - [ ] Fase 7..10 — belum
 
 ## Decisions Pending (jangan diputuskan sendiri)
