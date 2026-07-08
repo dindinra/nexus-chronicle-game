@@ -21,8 +21,8 @@
   - [x] 2.1 Desain skema (lihat `DB_SCHEMA_PROPOSAL.md`)
   - [x] 2.2 Implementasi: `models.py` (4 tabel + trigger active-deck), `database.py` (engine/session/init_db/get_db + FK pragma), `config.py` (Pydantic settings + JWT)
   - [x] Verifikasi: `init_db()` terbukti bentuk tabel `users, decks, deck_cards, match_history` di `nexus_chronicle.db`
-  - ⚠ Approval skema: `DB_SCHEMA_PROPOSAL.md` status = **menunggu SETUJUI final user** (lihat checklist di akhir file)
-- [ ] **Fase 3** — Auth (register/login + JWT) — **SELANJUTNYA** (backend-first, sebelum frontend baru)
+  - ✅ Approval skema: **SETUJUI** (2026-07-08) — `DB_SCHEMA_PROPOSAL.md` status = APPROVED.
+- [ ] **Fase 3** — Auth (register/login + JWT) — **IN PROGRESS** (2026-07-08): ✅ register endpoint; ⏳ login + JWT next
 - [ ] **Fase 4** — Data kartu (static card data / API kartu)
 - [ ] **Fase 5** — Deck API (CRUD deck + validasi 30/6 di API layer)
 - [ ] **Fase 6** — Frontend baru: scaffold React+TS+Vite (Fase 6.1) — SETELAH Fase 3/4/5
