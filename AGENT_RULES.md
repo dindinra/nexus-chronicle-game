@@ -56,3 +56,16 @@ python -m uvicorn backend.main:app --host 127.0.0.1 --port <port kosong>
 - Kalau diff **BERSIH** (cuma perubahan yang agent tulis sendiri, tidak ada baris asing/tertimpa), itu aman lanjut — kemungkinan besar bug di sistem warning tool, bukan sibling beneran.
 - Kalau diff **MENUNJUKKAN perubahan asing** yang bukan dari agent → STOP & lapor (jangan di-overwrite).
 - Konteks: 2026-07-08 warning muncul saat patch `PROGRESS.md` (6.2), tapi `git diff` membuktikan hanya perubahan agent sendiri → false-positive. Tidak ada data hilang.
+
+## 9. Auto-Push ke GitHub (setiap FASE selesai)
+- **PUSH OTOMATIS:** setiap kali SATU FASE PENUH selesai & sudah di-commit lokal, LANGSUNG push ke GitHub — jangan tunggu user minta.
+- **HANYA untuk penyelesaian FASE** (mis. Fase 6.6 selesai penuh), BUKAN sub-step kecil (6.6a, 6.6b, dst) — agar riwayat commit di GitHub rapi per-fase, bukan berantakan.
+- **KALAU RAGU** apakah sudah "selesai fase" atau baru sub-step → TANYA user dulu SEBELUM push.
+- Sebelum push, SELALU jalankan pengecekan pengaman:
+  1. `git status` → pastikan working tree BERSIH (semua yg perlu di-commit sudah di-commit, tidak ada perubahan menggantung).
+  2. Cek CEPAT tidak ada file sensitif ikut ter-stage (.env, *.db, credential apa pun) — walau `.gitignore` sudah ada, ini pengecekan ekstra sebelum push publik.
+  3. `git push origin master`.
+  4. Verifikasi `git ls-remote origin` bahwa commit lokal terbaru MATCH dengan remote.
+  5. Di ringkasan "STEP SELESAI", tambahkan baris: `Pushed to GitHub: [commit hash] — [ls-remote match: ya/tidak]`.
+- **KALAU PUSH GAGAL** (auth error, conflict, dll): STOP & LAPOR — JANGAN force-push / jangan coba workaround sendiri tanpa persetujuan user.
+- Catatan env: `gh` CLI TIDAK terpasang di host ini. Push pakai Personal Access Token (PAT) — buat repo via GitHub REST API, lalu `git push -u https://USER:$TOKEN@github.com/USER/REPO.git master`, lalu reset URL remote ke bentuk tanpa token + `git credential reject` agar token tidak tersisa di `.git/config`.
