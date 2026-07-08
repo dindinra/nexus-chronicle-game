@@ -35,7 +35,8 @@ source backend/venv/Scripts/activate
 python -m uvicorn backend.main:app --host 127.0.0.1 --port <port kosong>
 ```
 - App dijalankan sebagai package (`backend.main:app`) dari root proyek (DATABASE_URL sqlite relatif ke cwd).
-- **Hindari port 8001** — sudah terpakai dev server lama. Pakai 8002/8003/dst.
+- **Jangan biarkan orphan (PENTING):** SETIAP setelah testing per step, matikan dev server **beserta child `python.exe`-nya**, bukan cuma wrapper bash-nya. `process kill` di Hermes hanya membunuh bash → child python tetap jalan & menumpuk di port (pernah terjadi: 6 instance uvicorn orphan di 8000-8005). Cara benar: `netstat -ano | grep :<port>` → ambil PID listener, lalu `taskkill //F //PID <pid>`. Sebelum mulai, pastikan port bersih (tidak ada instance ganda).
+- Default dev port = **8000** — jalankan SATU instance segar, jangan banyak sekaligus.
 - Cek sehat: `GET /health` (200), `GET /health/db` (200), `GET /docs` (Swagger UI).
 - Tes endpoint via `curl http://127.0.0.1:<port>/<path>` atau `TestClient`.
 
