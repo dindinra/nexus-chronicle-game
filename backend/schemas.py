@@ -1,5 +1,5 @@
 from typing import Optional
-
+from datetime import datetime
 from pydantic import BaseModel
 
 
@@ -59,3 +59,38 @@ class FusionOut(BaseModel):
     fusionType: str = ""
     formationHint: str = ""
     image_url: Optional[str] = None
+
+
+# ---- Fase 5: Deck API schemas (design) ----
+class DeckCardBase(BaseModel):
+    card_id: str
+    qty: int = 1
+    is_fusion: bool = False
+
+
+class DeckCreate(BaseModel):
+    name: str
+    format: str = "standard"
+    cards: list[DeckCardBase] = []
+
+
+class DeckUpdate(BaseModel):
+    name: Optional[str] = None
+    format: Optional[str] = None
+    cards: Optional[list[DeckCardBase]] = None
+
+
+class DeckCardOut(DeckCardBase):
+    id: int
+    deck_id: int
+
+
+class DeckOut(BaseModel):
+    id: int
+    user_id: int
+    name: str
+    format: str
+    is_active: bool
+    cards: list[DeckCardOut] = []
+    total_cards: int = 0
+    created_at: datetime
