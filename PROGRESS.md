@@ -57,6 +57,9 @@
   - `nf03 Dragon Emperor`: summonFn placeholder (hanya sysMsg). `nc13 Celestia Seraph`: battle-win draw logic ada di resolveAttack.
   - Detail di `PORTING_CHECKLIST.md` §10.
 
+## Dokumen Referensi Visi (Arsip)
+- Dokumen referensi visi (Game Feel + Game Bible + Lore) tersimpan di docs/vision/nexus-chronicle-vision-reference.md. Bagian A (Game Feel) relevan untuk Fase 8 nanti. Bagian D (Game Bible/Lore) adalah visi jangka panjang untuk proyek Fase 2 setelah MVP selesai — TIDAK mempengaruhi scope Fase 1-10 yang sedang berjalan.
+
 ## Catatan penting untuk sesi berikutnya
 - Prototype `index.html` (3181 baris) di `C:\Users\Dindin\Downloads\NexusChroniclePrototype\index.html` — **JANGAN DIHAPUS**, jadikan referensi source of truth.
 - Folder proyek: `C:\Users\Dindin\nexus-chronicle-game\` dengan struktur `/backend` dan `/frontend`.
