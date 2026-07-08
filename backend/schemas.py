@@ -62,6 +62,8 @@ class FusionOut(BaseModel):
 
 
 # ---- Fase 5: Deck API schemas (design) ----
+# NOTE: field `format` sengaja di-drop — model Deck (skema DB ter-approve) tidak
+# punya kolom format. Tambah via migrasi + re-approve gate bila diperlukan.
 class DeckCardBase(BaseModel):
     card_id: str
     qty: int = 1
@@ -70,13 +72,11 @@ class DeckCardBase(BaseModel):
 
 class DeckCreate(BaseModel):
     name: str
-    format: str = "standard"
     cards: list[DeckCardBase] = []
 
 
 class DeckUpdate(BaseModel):
     name: Optional[str] = None
-    format: Optional[str] = None
     cards: Optional[list[DeckCardBase]] = None
 
 
@@ -89,7 +89,6 @@ class DeckOut(BaseModel):
     id: int
     user_id: int
     name: str
-    format: str
     is_active: bool
     cards: list[DeckCardOut] = []
     total_cards: int = 0

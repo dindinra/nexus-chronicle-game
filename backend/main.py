@@ -58,6 +58,9 @@ app.include_router(auth_router.router)
 from .routers import cards as cards_router
 app.include_router(cards_router.router)
 
+from .routers import decks as decks_router
+app.include_router(decks_router.router)
+
 from fastapi.staticfiles import StaticFiles
 import os
 

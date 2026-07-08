@@ -37,12 +37,12 @@
   - [x] 4.5 Copy 26 PNG → `backend/static/cards/` + mount `StaticFiles` di `/static/cards` → gambar bisa diakses (curl 200 image/png)
   - [x] 4.6 Commit Fase 4 lengkap (lihat git log)
   - Catatan: `image_url` = `/static/cards/<file>` (bukan `/cards`) agar tidak menabrak API router `/cards`. Route `/cards/fusions` didahulukan sebelum `/cards/{id}` (bug routing 404 sudah diperbaiki). Port 8001 tetap dihuni dev server lama — tes pakai 8003/8004/8005.
-- [ ] **Fase 5** — Deck API (CRUD deck + validasi 30/6 di API layer) — **IN PROGRESS (design, 2026-07-08)**
-  - [x] 5.1 Desain: schema `DeckCreate/DeckUpdate/DeckOut/DeckCard` di `schemas.py` + rencana endpoint + aturan validasi 30/6 (lihat laporan) — MENUNGGU KONFIRMASI USER
-  - [ ] 5.2 Implementasi `POST /decks` (create) + validasi 30/6
+- [ ] **Fase 5** — Deck API (CRUD deck + validasi 30/6 di API layer) — **IN PROGRESS (2026-07-08)**
+  - [x] 5.1 Desain: schema `DeckCreate/DeckUpdate/DeckOut/DeckCard` di `schemas.py` + rencana endpoint + aturan validasi 30/6 (30 main + maks 6 fusion)
+  - [x] 5.2 `POST /decks` (create) + validasi 30/6 — **SELESAI & terverifikasi**: valid→201, 29 main→422, no-auth→401, unknown id→422. CATATAN: field `format` di-drop (model Deck tdk punya kolom format; butuh migrasi + re-approve gate bila mau)
   - [ ] 5.3 `GET /decks` (list) + `GET /decks/{id}`
   - [ ] 5.4 `PUT /decks/{id}` + `DELETE /decks/{id}`
-  - [ ] 5.5 Verifikasi (TestClient/curl) + commit
+  - [ ] 5.5 Verifikasi akhir + commit Fase 5
 - [ ] **Fase 6** — Frontend baru: scaffold React+TS+Vite (Fase 6.1) — SETELAH Fase 3/4/5
 - [ ] Fase 7..10 — belum
 
