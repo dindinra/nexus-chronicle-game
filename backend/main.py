@@ -55,6 +55,18 @@ async def health_db():
 from .routers import auth as auth_router
 app.include_router(auth_router.router)
 
+from .routers import cards as cards_router
+app.include_router(cards_router.router)
+
+from fastapi.staticfiles import StaticFiles
+import os
+
+# Serve card artwork. Referenced from CardOut.image_url as /static/cards/<file>.
+# Mounted under /static/cards (NOT /cards) so it never shadows the /cards API router.
+_CARDS_STATIC_DIR = os.path.join(os.path.dirname(__file__), "static", "cards")
+if os.path.isdir(_CARDS_STATIC_DIR):
+    app.mount("/static/cards", StaticFiles(directory=_CARDS_STATIC_DIR), name="cards-static")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)

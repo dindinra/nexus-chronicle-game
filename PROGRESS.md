@@ -29,7 +29,14 @@
   - [x] 3.4 `GET /auth/me` (protected, butuh Bearer token)
   - [x] Verifikasi end-to-end (TestClient): register 201, dup 409, login salah 401, login benar 200+token, /me no-token 401, /me+token 200, token rusak 401 — **ALL PASSED**
   - Files: `security.py` (+`create_access_token`/`decode_token`), `schemas.py` (+`UserLogin`/`Token`), `routers/auth.py` (+login/me/get_current_user)
-- [ ] **Fase 4** — Data kartu (static card data / API kartu)
+- [x] **Fase 4** — Data kartu (static card data / API kartu) — **SELESAI & terverifikasi** (2026-07-08)
+  - [x] 4.1 Data statis `backend/data/cards.json` (28 kartu: 22 `CARDS` + 6 `FUSIONS`, tanpa fungsi JS) + `cards_data.py` loader
+  - [x] 4.2 Schema `CardOut` + `FusionOut` (`schemas.py`)
+  - [x] 4.3 Router `backend/routers/cards.py`: `GET /cards`, `GET /cards/{id}`, `GET /cards/fusions`, `GET /cards/fusions/{id}`
+  - [x] 4.4 Wire `cards_router` ke `main.py` → `/cards` ter-serve (verifikasi: /cards 22, /cards/fusions 6, id salah 404)
+  - [x] 4.5 Copy 26 PNG → `backend/static/cards/` + mount `StaticFiles` di `/static/cards` → gambar bisa diakses (curl 200 image/png)
+  - [x] 4.6 Commit Fase 4 lengkap (lihat git log)
+  - Catatan: `image_url` = `/static/cards/<file>` (bukan `/cards`) agar tidak menabrak API router `/cards`. Route `/cards/fusions` didahulukan sebelum `/cards/{id}` (bug routing 404 sudah diperbaiki). Port 8001 tetap dihuni dev server lama — tes pakai 8003/8004/8005.
 - [ ] **Fase 5** — Deck API (CRUD deck + validasi 30/6 di API layer)
 - [ ] **Fase 6** — Frontend baru: scaffold React+TS+Vite (Fase 6.1) — SETELAH Fase 3/4/5
 - [ ] Fase 7..10 — belum

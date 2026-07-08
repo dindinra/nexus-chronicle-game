@@ -1,0 +1,34 @@
+{
+  "cards": [
+    {"id":"nc01","name":"Lyria, Silver Vanguard","rarity":"E","lv":2,"cost":2,"fac":"Draconis","atk":8,"defense":9,"ctype":"unit","img":"cards/nc01.png","eff":"Front/once: Search 1 Draconis Lv1 Unit from your Deck to hand. GY: Recover 1 Draconis Lv≤2 from GY."},
+    {"id":"nc02","name":"Draconis Whelp","rarity":"C","lv":1,"cost":1,"fac":"Draconis","atk":10,"defense":4,"ctype":"unit","img":"cards/nc02.png","eff":"Passive: +3 ATK when another Draconis is on your field."},
+    {"id":"nc03","name":"Iron Sentinel","rarity":"C","lv":1,"cost":1,"fac":"Machina","atk":4,"defense":13,"ctype":"unit","img":"cards/nc03.png","eff":"Passive (Back): All enemy Front Row cards lose 5 ATK."},
+    {"id":"nc04","name":"Abyss Specter","rarity":"E","lv":2,"cost":2,"fac":"Abyss","atk":9,"defense":6,"ctype":"unit","img":"cards/nc04.png","eff":"GY: Draw 1 card when destroyed."},
+    {"id":"nc05","name":"Celestia Archer","rarity":"C","lv":1,"cost":1,"fac":"Celestia","atk":7,"defense":5,"ctype":"unit","img":"cards/nc05.png","eff":"Front/once: Deal 3 direct LP damage when summoned."},
+    {"id":"nc06","name":"Wildlands Brute","rarity":"C","lv":1,"cost":1,"fac":"Wildlands","atk":13,"defense":3,"ctype":"unit","img":"cards/nc06.png","eff":"Passive: +5 ATK if only card in Front Row."},
+    {"id":"nc07","name":"Mechspider Scout","rarity":"C","lv":1,"cost":1,"fac":"Machina","atk":7,"defense":8,"ctype":"unit","img":"cards/nc07.png","eff":"GY: Draw 1 card when destroyed."},
+    {"id":"nc08","name":"Draconite Knight","rarity":"E","lv":2,"cost":2,"fac":"Draconis","atk":7,"defense":10,"ctype":"unit","img":"cards/nc08.png","eff":"Passive (Back): Front Row cards gain +5 ATK. Back/once: Negate next attack."},
+    {"id":"nc09","name":"Shadow Asp","rarity":"C","lv":1,"cost":1,"fac":"Abyss","atk":8,"defense":5,"ctype":"unit","img":"cards/nc09.png","eff":"GY: Deal 5 LP damage to enemy."},
+    {"id":"nc10","name":"Silver Paladin","rarity":"C","lv":1,"cost":1,"fac":"Draconis","atk":9,"defense":9,"ctype":"unit","img":"cards/nc10.png","eff":"No special effect."},
+    {"id":"nc11","name":"Storm Hawk","rarity":"C","lv":1,"cost":1,"fac":"Wildlands","atk":8,"defense":4,"ctype":"unit","img":"cards/nc11.png","eff":"Can attack Back Row even if enemy has Front Row cards."},
+    {"id":"nc12","name":"Vault Golem","rarity":"L","lv":3,"cost":3,"fac":"Machina","atk":6,"defense":18,"ctype":"unit","img":"cards/nc12.png","indestructible":true,"eff":"Cannot be destroyed by effects. Front/once: Destroy 1 enemy card."},
+    {"id":"nc13","name":"Celestia Seraph","rarity":"L","lv":3,"cost":3,"fac":"Celestia","atk":10,"defense":10,"ctype":"unit","img":"cards/nc13.png","eff":"Front/once: Restore 10 LP. Battle-win: Draw 1 card."},
+    {"id":"nc14","name":"Abyss Overlord","rarity":"L","lv":3,"cost":3,"fac":"Abyss","atk":10,"defense":8,"ctype":"unit","img":"cards/nc14.png","eff":"Front/once: Special Summon 2 Abyss Lv1 Units from your Deck to Back Row (free)."},
+    {"id":"at01","name":"Photon Slash","rarity":"C","lv":0,"cost":0,"fac":"Celestia","atk":0,"defense":0,"ctype":"attack","img":"","eff":"ATTACK: Give 1 attacking card +10 ATK this battle."},
+    {"id":"at02","name":"Dragon Fang","rarity":"C","lv":0,"cost":0,"fac":"Draconis","atk":0,"defense":0,"ctype":"attack","img":"","eff":"ATTACK: Give 1 attacking Draconis card +15 ATK this battle."},
+    {"id":"tc01","name":"Teleport","rarity":"C","lv":0,"cost":0,"fac":"Machina","atk":0,"defense":0,"ctype":"tactic","img":"","eff":"TACTIC: Move 1 of your units to any empty slot for FREE (no Energy cost)."},
+    {"id":"tc02","name":"Healing Light","rarity":"C","lv":0,"cost":0,"fac":"Celestia","atk":0,"defense":0,"ctype":"tactic","img":"","eff":"TACTIC: Restore 15 LP."},
+    {"id":"tc03","name":"Reinforcement Call","rarity":"C","lv":0,"cost":0,"fac":"Machina","atk":0,"defense":0,"ctype":"tactic","img":"","eff":"TACTIC: Search 1 Lv1 Unit card from your Deck to hand."},
+    {"id":"tc04","name":"Rapid Deployment","rarity":"E","lv":0,"cost":0,"fac":"Wildlands","atk":0,"defense":0,"ctype":"tactic","img":"","eff":"TACTIC: Special Summon 1 Lv1 Unit from your hand to the field for FREE (no Energy cost)."},
+    {"id":"tr01","name":"Mirror Force","rarity":"E","lv":0,"cost":0,"fac":"Draconis","atk":0,"defense":0,"ctype":"trap","img":"","eff":"TRAP: When an enemy attacks — destroy all enemy Front Row cards."},
+    {"id":"tr02","name":"Negate Strike","rarity":"C","lv":0,"cost":0,"fac":"Machina","atk":0,"defense":0,"ctype":"trap","img":"","eff":"TRAP: Negate 1 attack completely."}
+  ],
+  "fusions": [
+    {"id":"nf01","name":"Dragon Sovereign","rarity":"F","lv":3,"fac":"Draconis","atk":40,"defense":30,"ctype":"unit","img":"cards/nf01.png","mats":["nc01","nc02"],"fusionType":"contact","formationHint":"Lyria + Draconis Whelp — anywhere on your field","eff":"Summon: Destroy all enemy Back Row cards."},
+    {"id":"nf02","name":"Abyss Reaper","rarity":"F","lv":2,"fac":"Abyss","atk":45,"defense":10,"ctype":"unit","img":"cards/nf02.png","mats":["nc04","nc09"],"fusionType":"line","formationHint":"Abyss Specter + Shadow Asp — both in the SAME row","eff":"Summon: Deal 10 LP damage to enemy."},
+    {"id":"nf03","name":"Dragon Emperor","rarity":"F","lv":3,"fac":"Draconis","atk":48,"defense":20,"ctype":"unit","img":"cards/nf03.png","mats":["nc08","nc05"],"fusionType":"column","formationHint":"Draconite Knight (Front) + Celestia Archer (Back) — SAME column","eff":"Summon: Destroy both enemy cards in the mirrored column."},
+    {"id":"nf04","name":"Machina Titan","rarity":"F","lv":3,"fac":"Machina","atk":35,"defense":35,"ctype":"unit","img":"cards/nf04.png","mats":["nc03","nc12"],"fusionType":"vanguard","formationHint":"Iron Sentinel (Front) + Vault Golem (Back) — any column","eff":"Summon: All enemy cards −10 ATK this turn."},
+    {"id":"nf05","name":"Celestia Dragon","rarity":"F","lv":3,"fac":"Celestia","atk":38,"defense":28,"ctype":"unit","img":"cards/nf05.png","mats":["nc13","nc10","nc11"],"fusionType":"triangle","formationHint":"Celestia Seraph + Silver Paladin (2 in one row) + Storm Hawk (1 in the other row)","eff":"Summon: Restore 15 LP and draw 1 card."},
+    {"id":"nf06","name":"Wildlands Alpha","rarity":"F","lv":2,"fac":"Wildlands","atk":42,"defense":8,"ctype":"unit","img":"cards/nf06.png","mats":["nc06","nc07"],"fusionType":"contact","formationHint":"Wildlands Brute + Mechspider Scout — anywhere on your field","eff":"Summon: Destroy 1 enemy Front Row card."}
+  ]
+}
