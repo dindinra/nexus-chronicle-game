@@ -24,9 +24,9 @@
 - **Urutan:** Fase 3 (Auth) & Fase 4/5 (data kartu + deck API) di-backend dulu, BARU Fase 6 scaffold frontend. Jangan loncat ke frontend duluan.
 
 ## 4. Keamanan Path (PENTING — akar masalah bug lama)
-- Selalu pakai **path MSYS** (`/c/Users/...`), BUKAN path absolut Windows (`C:\Users\...`) untuk semua operasi file/terminal.
-- Root cause folder sampah `C:\c\` & `C:\e\` = pemakaian path absolut Windows. Jangan ulangi.
-- **TODO pre-release:** bersihkan `C:\c\` & `C:\e\`, pastikan root cause sudah diperbaiki — SEBELUM proyek dianggap selesai/dirilis.
+- **Terminal (bash MSYS):** pakai path MSYS (`/c/Users/...`) — aman untuk `cd`/`cp`/`rm`/`git`.
+- **Tool file Hermes (`write_file`/`patch`):** GUNAKAN **absolute Windows** (`C:\Users\...`), BUKAN MSYS `/c/Users/...` untuk path di LUAR workspace root. write_file mengubah `/c/Users/...` (luar root) jadi `C:\c\Users\...` (bug nyata 2026-07-08).
+- Root cause folder sampah `C:\c\` & `C:\e\` = **write_file menerima path MSYS di luar workspace root** (bukan pemakaian absolute Windows). Sudah diperbaiki & folder **DIHAPUS total 2026-07-08** (TODO pre-release SELESAI).
 
 ## 5. Cara Menjalankan Backend (verifikasi kesehatan)
 ```bash
@@ -48,4 +48,11 @@ python -m uvicorn backend.main:app --host 127.0.0.1 --port <port kosong>
 ## 7. Kemampuan & Keterbatasan Agent (catat di tiap ganti model)
 - Bisa: eksekusi terminal langsung (bash MSYS/git-bash) di venv; akses filesystem langsung (read/write/patch); jalankan & tes backend.
 - Model bisa berbeda tiap sesi — **jangan asumsikan ingatan lintas sesi**; selalu baca `AGENT_RULES.md` + `PROGRESS.md` + memory.
-- Path absolut Windows harus dihindari (lihat §4).
+- Untuk tool file Hermes (`write_file`/`patch`) GUNAKAN absolute Windows; MSYS `/c/...` hanya aman untuk terminal (lihat §4).
+
+## 8. Warning "Sibling Subagent" — False-Positive (catat 2026-07-08)
+- Warning sibling subagent **PERNAH muncul false-positive** (contoh ID: `20260708_131440_231c60`).
+- Kalau muncul lagi: **SELALU verifikasi dengan `git diff HEAD -- <file>` dulu SEBELUM panik/rollback**.
+- Kalau diff **BERSIH** (cuma perubahan yang agent tulis sendiri, tidak ada baris asing/tertimpa), itu aman lanjut — kemungkinan besar bug di sistem warning tool, bukan sibling beneran.
+- Kalau diff **MENUNJUKKAN perubahan asing** yang bukan dari agent → STOP & lapor (jangan di-overwrite).
+- Konteks: 2026-07-08 warning muncul saat patch `PROGRESS.md` (6.2), tapi `git diff` membuktikan hanya perubahan agent sendiri → false-positive. Tidak ada data hilang.
