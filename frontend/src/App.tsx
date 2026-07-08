@@ -3,6 +3,7 @@ import Login from './pages/Login'
 import Menu from './pages/Menu'
 import DeckBuilder from './pages/DeckBuilder'
 import GameBoard from './pages/GameBoard'
+import CardList from './pages/CardList'
 
 function Nav() {
   return (
@@ -17,6 +18,7 @@ function Nav() {
       <Link to="/login">Login</Link>
       <Link to="/menu">Menu</Link>
       <Link to="/deck-builder">Deck Builder</Link>
+      <Link to="/cards">Cards</Link>
       <Link to="/game">Game Board</Link>
     </nav>
   )
@@ -32,6 +34,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/menu" element={<Menu />} />
           <Route path="/deck-builder" element={<DeckBuilder />} />
+          <Route path="/cards" element={<CardList />} />
           <Route path="/game" element={<GameBoard />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>

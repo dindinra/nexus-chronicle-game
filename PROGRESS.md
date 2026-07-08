@@ -50,6 +50,11 @@
   - [x] 6.3 Struktur dasar frontend (routing + tipe TS) — **SELESAI & terverifikasi** (2026-07-08)
     - [x] 6.3a Routing sederhana (Login/Menu/Deck Builder/Game Board) + `react-router-dom` — **SELESAI**: `npm run build` lolos (tsc -b + vite, 28 modules). `App.tsx` pakai `<BrowserRouter>`+`<Routes>`; 4 halaman placeholder di `src/pages/`.
     - [x] 6.3b Definisi tipe TypeScript (Card, Deck, GameState) — **SELESAI & terverifikasi**: `src/types/` (cards.ts, deck.ts, game.ts, index.ts), diselaraskan dengan `backend/schemas.py` (CardOut/FusionOut/DeckOut) + objek `G` prototype. `npm run build` lolos (tsc -b + vite build, 28 modules).
+  - [x] 6.4 Fetch `/cards` & `/cards/fusions` + render daftar kartu (validasi FE↔BE) — **SELESAI & terverifikasi** (2026-07-08)
+    - API client fetch-based (`src/api/client.ts` + `src/api/cards.ts`; base URL `http://localhost:8000`; helper `assetUrl` untuk prefix path gambar relatif) + halaman `src/pages/CardList.tsx` (route `/cards` + nav link di `App.tsx`).
+    - CORS: dari awal sudah benar (`FRONTEND_URL=http://localhost:5173` di `.env` sudah masuk `allow_origins`). Diperkuat: tambah `http://127.0.0.1:5173` + default port backend disamakan **8001 → 8000** di `backend/main.py` (sesuai ekspektasi user).
+    - Verifikasi browser (http://127.0.0.1:5173/cards): render **22 kartu + 6 fusion**, **0 error CORS/network** di console. **20 gambar** unit+fusion load dari `http://localhost:8000/static/cards/...`; 8 "broken" = kartu attack/tactic/trap (memang `img:""` di `cards.json`, bukan kegagalan serving).
+    - `npm run build` lolos (tsc -b + vite build, 31 modules). Backend jalan di :8000, Vite dev di 127.0.0.1:5173 (IPv4 — hindari mismatch IPv6 `::1` saat browser).
 - [ ] Fase 7..10 — belum
 
 ## Decisions Pending (jangan diputuskan sendiri)

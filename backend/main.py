@@ -26,10 +26,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS for frontend development
+# CORS for frontend development.
+# Origin Vite dev server (http://localhost:5173 / http://127.0.0.1:5173) diizinkan.
+# FRONTEND_URL diambil dari .env (default http://localhost:5173).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL, "http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[
+        settings.FRONTEND_URL,
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -72,4 +79,4 @@ if os.path.isdir(_CARDS_STATIC_DIR):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
