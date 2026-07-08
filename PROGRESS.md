@@ -53,4 +53,4 @@
 - 26 file asset kartu PNG di folder `cards/` — perlu di-copy ke frontend/static atau di-serve via backend.
 - Semua logic game (efek kartu, AI, fusion, battle) saat ini **client-side JS** di dalam `index.html`.
 - **Opsi A (client-authoritative) SUDAH dikunci di Fase 0.2** — tidak perlu keputusan ulang sebelum Fase 4.
-- TODO: ada folder sampah `C:\c\` dan `C:\e\` akibat bug path MSYS→Windows yang belum dibersihkan. Periksa isinya, hapus kalau aman, dan pastikan root cause-nya (path absolut Windows untuk semua file operation) sudah diperbaiki — SEBELUM proyek dianggap selesai/dirilis.
+- [x] TODO (2026-07-08): folder `C:\c\` & `C:\e\` (akibat bug path MSYS→Windows) **DIHAPUS TOTAL** — isinya diverifikasi: eksperimen awal (TS engine port, scaffold Prisma/socket usang, demo) yang diputus user sebagai junk & dihapus seluruhnya. Root cause sudah diperbaiki (write_file/patch pakai absolute Windows path `C:\Users\...`; MSYS `/c/...` hanya untuk terminal `cd`/`cp`/`rm`).
