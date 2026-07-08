@@ -47,9 +47,9 @@
 - [x] **Fase 6** — Frontend baru: React+TS+Vite — **IN PROGRESS (2026-07-08)**
   - [x] 6.1 Scaffold Vite+React+TS di `/frontend` — **SELESAI & terverifikasi**: `npm run dev` → halaman default Vite+React (HTTP 200 di :5173, terbukti via curl). Prototype lama dipindah ke `frontend/_legacy-reference/` (index.html + cards/) sebagai referensi porting 6.7.
   - [x] 6.2 Porting checklist (inventori 138 fungsi + 28 efek kartu) — **SELESAI**: tersimpan di `PORTING_CHECKLIST.md` (root). Belum mulai porting kodenya (baru mulai 6.3+).
-  - [ ] 6.3 Struktur dasar frontend (routing + tipe TS) — **IN PROGRESS (2026-07-08)**
+  - [x] 6.3 Struktur dasar frontend (routing + tipe TS) — **SELESAI & terverifikasi** (2026-07-08)
     - [x] 6.3a Routing sederhana (Login/Menu/Deck Builder/Game Board) + `react-router-dom` — **SELESAI**: `npm run build` lolos (tsc -b + vite, 28 modules). `App.tsx` pakai `<BrowserRouter>`+`<Routes>`; 4 halaman placeholder di `src/pages/`.
-    - [ ] 6.3b Definisi tipe TypeScript (Card, Deck, GameState) — BELUM
+    - [x] 6.3b Definisi tipe TypeScript (Card, Deck, GameState) — **SELESAI & terverifikasi**: `src/types/` (cards.ts, deck.ts, game.ts, index.ts), diselaraskan dengan `backend/schemas.py` (CardOut/FusionOut/DeckOut) + objek `G` prototype. `npm run build` lolos (tsc -b + vite build, 28 modules).
 - [ ] Fase 7..10 — belum
 
 ## Decisions Pending (jangan diputuskan sendiri)
