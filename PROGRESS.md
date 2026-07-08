@@ -44,7 +44,9 @@
   - [x] 5.4 `PUT /decks/{id}` + `DELETE /decks/{id}` — **SELESAI & terverifikasi**. PUT: name-only→200, replace-cards→200, 29 main→422, unknown id→422, other-user→404, no-auth→401. DELETE: active-deck→204 (deck hilang, sisa deck lain tetap ada), match_history.deck_id→NULL (fk SET NULL, tidak ada orphan), other-user→404, nonexistent→404, no-auth→401. **Ownership = 404 di semua endpoint (POST/GET/list/PUT/DELETE)**, tidak bocor info keberadaan deck. Field `format` TIDAK ada.
   - [x] 5.4b `POST /decks/{id}/activate` — **SELESAI & terverifikasi**: set active→200, trigger auto-nonaktifkan deck lain milik user yang sama (bukti: activate A → B auto-deactive), ownership→404, no-auth→401, idempoten. Melengkapi 5.4: user punya cara set deck lain jadi aktif setelah hapus active deck (tanpa auto-promote).
   - [x] 5.5 Verifikasi akhir + commit Fase 5 — **SELESAI** (final integration test: full lifecycle create→activate→put→delete + ownership 404 + no-auth 401 di semua endpoint, ALL PASSED; committed).
-- [ ] **Fase 6** — Frontend baru: scaffold React+TS+Vite (Fase 6.1) — SETELAH Fase 3/4/5
+- [x] **Fase 6** — Frontend baru: React+TS+Vite — **IN PROGRESS (2026-07-08)**
+  - [x] 6.1 Scaffold Vite+React+TS di `/frontend` — **SELESAI & terverifikasi**: `npm run dev` → halaman default Vite+React (HTTP 200 di :5173, terbukti via curl). Prototype lama dipindah ke `frontend/_legacy-reference/` (index.html + cards/) sebagai referensi porting 6.7.
+  - [ ] 6.2 Porting checklist (prototype → React components) — BELUM
 - [ ] Fase 7..10 — belum
 
 ## Catatan penting untuk sesi berikutnya
