@@ -52,6 +52,9 @@ async def health_db():
         return {"status": "error", "database": "disconnected", "detail": str(e)}
 
 
+from .routers import auth as auth_router
+app.include_router(auth_router.router)
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)

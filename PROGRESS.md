@@ -22,7 +22,13 @@
   - [x] 2.2 Implementasi: `models.py` (4 tabel + trigger active-deck), `database.py` (engine/session/init_db/get_db + FK pragma), `config.py` (Pydantic settings + JWT)
   - [x] Verifikasi: `init_db()` terbukti bentuk tabel `users, decks, deck_cards, match_history` di `nexus_chronicle.db`
   - ✅ Approval skema: **SETUJUI** (2026-07-08) — `DB_SCHEMA_PROPOSAL.md` status = APPROVED.
-- [ ] **Fase 3** — Auth (register/login + JWT) — **IN PROGRESS** (2026-07-08): ✅ register endpoint; ⏳ login + JWT next
+- [x] **Fase 3** — Auth (register/login + JWT) — **SELESAI & terverifikasi** (2026-07-08)
+  - [x] 3.1 `POST /auth/register` (bcrypt hash) — ✅ sudah ada sejak awal
+  - [x] 3.2 `POST /auth/login` → return JWT (`access_token`, `token_type=bearer`) via `python-jose`
+  - [x] 3.3 `get_current_user` dependency (decode JWT `sub` → user, 401 jika invalid/expired)
+  - [x] 3.4 `GET /auth/me` (protected, butuh Bearer token)
+  - [x] Verifikasi end-to-end (TestClient): register 201, dup 409, login salah 401, login benar 200+token, /me no-token 401, /me+token 200, token rusak 401 — **ALL PASSED**
+  - Files: `security.py` (+`create_access_token`/`decode_token`), `schemas.py` (+`UserLogin`/`Token`), `routers/auth.py` (+login/me/get_current_user)
 - [ ] **Fase 4** — Data kartu (static card data / API kartu)
 - [ ] **Fase 5** — Deck API (CRUD deck + validasi 30/6 di API layer)
 - [ ] **Fase 6** — Frontend baru: scaffold React+TS+Vite (Fase 6.1) — SETELAH Fase 3/4/5
@@ -34,3 +40,4 @@
 - 26 file asset kartu PNG di folder `cards/` — perlu di-copy ke frontend/static atau di-serve via backend.
 - Semua logic game (efek kartu, AI, fusion, battle) saat ini **client-side JS** di dalam `index.html`.
 - **Opsi A (client-authoritative) SUDAH dikunci di Fase 0.2** — tidak perlu keputusan ulang sebelum Fase 4.
+- TODO: ada folder sampah `C:\c\` dan `C:\e\` akibat bug path MSYS→Windows yang belum dibersihkan. Periksa isinya, hapus kalau aman, dan pastikan root cause-nya (path absolut Windows untuk semua file operation) sudah diperbaiki — SEBELUM proyek dianggap selesai/dirilis.
