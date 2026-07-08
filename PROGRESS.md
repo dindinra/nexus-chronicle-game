@@ -49,6 +49,11 @@
   - [x] 6.2 Porting checklist (inventori 138 fungsi + 28 efek kartu) — **SELESAI**: tersimpan di `PORTING_CHECKLIST.md` (root). Belum mulai porting kodenya (baru mulai 6.3+).
 - [ ] Fase 7..10 — belum
 
+## Decisions Pending (jangan diputuskan sendiri)
+- **DECISION PENDING untuk nf03 & nc13** — tunggu keputusan user saat porting efek kartu di 6.7, **JANGAN** diasumsikan/diputuskan sendiri saat itu tiba, **WAJIB tanya dulu**.
+  - `nf03 Dragon Emperor`: summonFn placeholder (hanya sysMsg). `nc13 Celestia Seraph`: battle-win draw logic ada di resolveAttack.
+  - Detail di `PORTING_CHECKLIST.md` §10.
+
 ## Catatan penting untuk sesi berikutnya
 - Prototype `index.html` (3181 baris) di `C:\Users\Dindin\Downloads\NexusChroniclePrototype\index.html` — **JANGAN DIHAPUS**, jadikan referensi source of truth.
 - Folder proyek: `C:\Users\Dindin\nexus-chronicle-game\` dengan struktur `/backend` dan `/frontend`.

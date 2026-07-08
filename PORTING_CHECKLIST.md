@@ -56,7 +56,7 @@ Trigger tiap kartu:
 | nc10 | Silver Paladin | Draconis | 1 | 9/9 | Tidak ada efek | — |
 | nc11 | Storm Hawk | Wildlands | 1 | 8/4 | Bisa menyerang Back Row walau musuh punya Front Row | flag di `execAttack` (`atkSrc.card.id!=='nc11'`) |
 | nc12 | Vault Golem | Machina | 3 | 6/18 | **Indestructible** (tidak bisa dihancurkan efek); **Front/once**: hancurkan 1 kartu musuh | flag `indestructible`, `frontOnceFn`→`openDestroyTarget` |
-| nc13 | Celestia Seraph | Celestia | 3 | 10/10 | **Front/once**: +10 LP; **Battle-win**: draw 1 kartu | `frontOnceFn`→`G.pLP+=10; redrawLP` (battle-win draw → lihat `resolveAttack`/combat, VERIFIKASI saat 6.7) |
+| nc13 | Celestia Seraph | Celestia | 3 | 10/10 | **Front/once**: +10 LP; **Battle-win**: draw 1 kartu | `frontOnceFn`→`G.pLP+=10; redrawLP` (battle-win draw → lihat `resolveAttack`/combat, VERIFIKASI saat 6.7) ⏳ **DECISION PENDING** (lihat §10). |
 | nc14 | Abyss Overlord | Abyss | 3 | 10/8 | **Front/once**: Special Summon 2 Abyss Lv1 dari Deck ke Back Row (gratis) | `frontOnceFn`→`openSpecialSummonFromDeck(Abyss Lv1, 2, 'back')` |
 
 ### 2.2 Attack Cards (2)
@@ -84,7 +84,7 @@ Trigger tiap kartu:
 |----|------|-----|---------|-------------------|--------------|---------|
 | nf01 | Dragon Sovereign | Draconis | 40/30 | nc01+nc02 (contact) | Hancurkan semua Back Row musuh | `summonFn`→`G.eBack=[null,null,null]` |
 | nf02 | Abyss Reaper | Abyss | 45/10 | nc04+nc09 (line) | 10 LP damage ke musuh | `summonFn`→`G.eLP-=10; redrawLP; checkWin` |
-| nf03 | Dragon Emperor | Draconis | 48/20 | nc08+nc05 (column) | **"Destroy both enemy cards in mirrored column"** | ⚠️ **BUG/PLACEHOLDER**: `summonFn` hanya `sysMsg(...)`, **TIDAK ada logika destroy**. Perbaiki saat 6.7 (implement destroy kolom mirror ATAU sesuaikan teks). |
+| nf03 | Dragon Emperor | Draconis | 48/20 | nc08+nc05 (column) | **"Destroy both enemy cards in mirrored column"** | ⚠️ **BUG/PLACEHOLDER**: `summonFn` hanya `sysMsg(...)`, **TIDAK ada logika destroy**. Perbaiki saat 6.7 (implement destroy kolom mirror ATAU sesuaikan teks). ⏳ **DECISION PENDING** (lihat §10). |
 | nf04 | Machina Titan | Machina | 35/35 | nc03+nc12 (vanguard) | Semua kartu musuh −10 ATK turn ini | `summonFn`→`_tempDebuff+=10` ke `eFront+eBack` |
 | nf05 | Celestia Dragon | Celestia | 38/28 | nc13+nc10+nc11 (triangle) | +15 LP dan draw 1 | `summonFn`→`G.pLP+=15; drawOne` |
 | nf06 | Wildlands Alpha | Wildlands | 42/8 | nc06+nc07 (contact) | Hancurkan 1 Front Row musuh | `summonFn`→hapus `eFront[0]` ke GY |
@@ -257,6 +257,11 @@ Field dari `initGame` (L1097–1123) + instance (`mkInst`):
 - 🔎 **`TM` internals** (`_tick`/`_draw`/`_onTimeout`): pahami kontrak timer sebelum ganti scheduler.
 - 🔎 **Drag & drop** (L1627–1653 + `endDrag`): pahami aturan drop (front/back, free teleport, free summon) sebelum porting ke dnd-kit.
 - 🔎 **Arena camera** (L2907–2973): logika pan/zoom/focus — porting ke transform CSS pada container React.
+
+## 10. DECISIONS PENDING (jangan diputuskan sendiri)
+> **DECISION PENDING untuk nf03 & nc13** — tunggu keputusan user saat porting efek kartu di 6.7, **JANGAN** diasumsikan/diputuskan sendiri saat itu tiba, **WAJIB tanya dulu**.
+> - `nf03 Dragon Emperor`: `summonFn` baru `sysMsg` (placeholder) — belum ada logic destroy kolom mirror. Putuskan: implement destroy ATAU ubah teks efek.
+> - `nc13 Celestia Seraph`: efek "Battle-win: Draw 1" tidak ada di `frontOnceFn`; logic ada di `resolveAttack`. Putuskan cara port.
 
 ---
 *Generated 2026-07-08 — inventori untuk Fase 6.2 (belum porting). Update checklist ini saat tiap fungsi selesai diporting di 6.3–6.7.*
