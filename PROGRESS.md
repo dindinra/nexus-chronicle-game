@@ -46,7 +46,7 @@
   - [x] 5.5 Verifikasi akhir + commit Fase 5 — **SELESAI** (final integration test: full lifecycle create→activate→put→delete + ownership 404 + no-auth 401 di semua endpoint, ALL PASSED; committed).
 - [x] **Fase 6** — Frontend baru: React+TS+Vite — **IN PROGRESS (2026-07-08)**
   - [x] 6.1 Scaffold Vite+React+TS di `/frontend` — **SELESAI & terverifikasi**: `npm run dev` → halaman default Vite+React (HTTP 200 di :5173, terbukti via curl). Prototype lama dipindah ke `frontend/_legacy-reference/` (index.html + cards/) sebagai referensi porting 6.7.
-  - [ ] 6.2 Porting checklist (prototype → React components) — BELUM
+  - [x] 6.2 Porting checklist (inventori 138 fungsi + 28 efek kartu) — **SELESAI**: tersimpan di `PORTING_CHECKLIST.md` (root). Belum mulai porting kodenya (baru mulai 6.3+).
 - [ ] Fase 7..10 — belum
 
 ## Catatan penting untuk sesi berikutnya
