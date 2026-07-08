@@ -62,8 +62,9 @@ class FusionOut(BaseModel):
 
 
 # ---- Fase 5: Deck API schemas (design) ----
-# NOTE: field `format` sengaja di-drop — model Deck (skema DB ter-approve) tidak
-# punya kolom format. Tambah via migrasi + re-approve gate bila diperlukan.
+# NOTE: field `format` PERMANEN di-drop per keputusan final user (2026-07-08).
+# Model Deck (skema DB ter-approve) tidak punya kolom format, dan TIDAK AKAN ada
+# migrasi/re-approve untuk menambahkannya (standard/casual = fitur masa depan bila perlu).
 class DeckCardBase(BaseModel):
     card_id: str
     qty: int = 1

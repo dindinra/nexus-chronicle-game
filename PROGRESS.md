@@ -37,12 +37,13 @@
   - [x] 4.5 Copy 26 PNG → `backend/static/cards/` + mount `StaticFiles` di `/static/cards` → gambar bisa diakses (curl 200 image/png)
   - [x] 4.6 Commit Fase 4 lengkap (lihat git log)
   - Catatan: `image_url` = `/static/cards/<file>` (bukan `/cards`) agar tidak menabrak API router `/cards`. Route `/cards/fusions` didahulukan sebelum `/cards/{id}` (bug routing 404 sudah diperbaiki). Port 8001 tetap dihuni dev server lama — tes pakai 8003/8004/8005.
-- [ ] **Fase 5** — Deck API (CRUD deck + validasi 30/6 di API layer) — **IN PROGRESS (2026-07-08)**
+- [x] **Fase 5** — Deck API (CRUD deck + validasi 30/6 di API layer) — **SELESAI (2026-07-08)**
   - [x] 5.1 Desain: schema `DeckCreate/DeckUpdate/DeckOut/DeckCard` di `schemas.py` + rencana endpoint + aturan validasi 30/6 (30 main + maks 6 fusion)
-  - [x] 5.2 `POST /decks` (create) + validasi 30/6 — **SELESAI & terverifikasi**: valid→201, 29 main→422, no-auth→401, unknown id→422. CATATAN: field `format` di-drop (model Deck tdk punya kolom format; butuh migrasi + re-approve gate bila mau)
-  - [ ] 5.3 `GET /decks` (list) + `GET /decks/{id}`
-  - [ ] 5.4 `PUT /decks/{id}` + `DELETE /decks/{id}`
-  - [ ] 5.5 Verifikasi akhir + commit Fase 5
+  - [x] 5.2 `POST /decks` (create) + validasi 30/6 — **SELESAI & terverifikasi**: valid→201, 29 main→422, no-auth→401, unknown id→422. CATATAN: field `format` **PERMANEN di-drop** per keputusan final user (2026-07-08) — Deck TIDAK punya kolom format, TIDAK akan ada migrasi/skema baru untuk format (standard/casual ditunda ke fitur masa depan bila dibutuhkan). Tidak perlu re-approve.
+  - [x] 5.3 `GET /decks` (list) + `GET /decks/{id}` — **SELESAI & terverifikasi** (no-auth→401, list→200, by-id→200, nonexistent→404, cross-user→404 ownership). Field `format` TIDAK ada (drop permanen).
+  - [x] 5.4 `PUT /decks/{id}` + `DELETE /decks/{id}` — **SELESAI & terverifikasi**. PUT: name-only→200, replace-cards→200, 29 main→422, unknown id→422, other-user→404, no-auth→401. DELETE: active-deck→204 (deck hilang, sisa deck lain tetap ada), match_history.deck_id→NULL (fk SET NULL, tidak ada orphan), other-user→404, nonexistent→404, no-auth→401. **Ownership = 404 di semua endpoint (POST/GET/list/PUT/DELETE)**, tidak bocor info keberadaan deck. Field `format` TIDAK ada.
+  - [x] 5.4b `POST /decks/{id}/activate` — **SELESAI & terverifikasi**: set active→200, trigger auto-nonaktifkan deck lain milik user yang sama (bukti: activate A → B auto-deactive), ownership→404, no-auth→401, idempoten. Melengkapi 5.4: user punya cara set deck lain jadi aktif setelah hapus active deck (tanpa auto-promote).
+  - [x] 5.5 Verifikasi akhir + commit Fase 5 — **SELESAI** (final integration test: full lifecycle create→activate→put→delete + ownership 404 + no-auth 401 di semua endpoint, ALL PASSED; committed).
 - [ ] **Fase 6** — Frontend baru: scaffold React+TS+Vite (Fase 6.1) — SETELAH Fase 3/4/5
 - [ ] Fase 7..10 — belum
 
