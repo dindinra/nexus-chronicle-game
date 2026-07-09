@@ -4,6 +4,7 @@ import Menu from './pages/Menu'
 import DeckBuilder from './pages/DeckBuilder'
 import GameBoard from './pages/GameBoard'
 import CardList from './pages/CardList'
+import ErrorBoundary from './ErrorBoundary'
 
 function Nav() {
   return (
@@ -28,17 +29,19 @@ export default function App() {
   return (
     <BrowserRouter>
       <Nav />
-      <main>
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/menu" element={<Menu />} />
-          <Route path="/deck-builder" element={<DeckBuilder />} />
-          <Route path="/cards" element={<CardList />} />
-          <Route path="/game" element={<GameBoard />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </main>
+      <ErrorBoundary>
+        <main>
+          <Routes>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/menu" element={<Menu />} />
+            <Route path="/deck-builder" element={<DeckBuilder />} />
+            <Route path="/cards" element={<CardList />} />
+            <Route path="/game" element={<GameBoard />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </main>
+      </ErrorBoundary>
     </BrowserRouter>
   )
 }

@@ -1,14 +1,15 @@
 // GameBoard.tsx — Fase 6.7b: mekanisme mainkan kartu (klik kartu di hand -> slot board).
 //
+// 6.7a-r1: tambah 6 pile (Deck/GY/Fusion x player & enemy) dengan count + klik -> modal placeholder.
 // 6.7a: render-only (state demo statis).
 // 6.7b: hand card clickable -> main ke slot player (Front dulu, lalu Back).
-//        board card (player) clickable -> kembalikan ke hand.
+//        board card (player) clickable -> kembalikan ke hand (AKAN DIHAPUS di r8).
 //        State nyata via useState (bukan demo statis lagi). Engine belum ada (6.7c/6.7d).
 
 import { useEffect, useState } from 'react';
 import { getCards } from '../api/cards';
-import type { Card } from '../types/cards';
-import type { BoardCard, BoardRow, GameState } from '../types/game';
+import type { Card, Fusion } from '../types/cards';
+import type { BoardCard, BoardRow, FusionInstance, GameState } from '../types/game';
 import { CardView } from '../components/CardView';
 
 function inst(card: Card, uid: string): BoardCard {
@@ -24,9 +25,34 @@ function inst(card: Card, uid: string): BoardCard {
   };
 }
 
+function instF(f: Fusion, uid: string): FusionInstance {
+  return {
+    ...f,
+    image_url: f.image_url ?? null,
+    uid,
+    _tempBoost: 0,
+    _tempDebuff: 0,
+    _frontOnceUsed: false,
+    _backOnceUsed: false,
+    _setTrap: false,
+    _hasAttacked: false,
+  };
+}
+
+// Beberapa fusion demo (hanya untuk tampilan count pile; data lengkap + logic nanti di 6.7d).
+const DEMO_FUSIONS: Fusion[] = [
+  { id: 'nf01', name: 'Dragon Sovereign', rarity: 'F', lv: 3, fac: 'Draconis', atk: 40, defense: 30, ctype: 'unit', eff: 'Destroy all enemy Back Row.', img: '', mats: ['nc01', 'nc02'], fusionType: 'contact', formationHint: '', image_url: null },
+  { id: 'nf02', name: 'Abyss Reaper', rarity: 'F', lv: 2, fac: 'Abyss', atk: 45, defense: 10, ctype: 'unit', eff: '10 LP damage.', img: '', mats: ['nc04', 'nc09'], fusionType: 'line', formationHint: '', image_url: null },
+  { id: 'nf03', name: 'Dragon Emperor', rarity: 'F', lv: 3, fac: 'Draconis', atk: 48, defense: 20, ctype: 'unit', eff: 'Destroy mirrored column.', img: '', mats: ['nc08', 'nc05'], fusionType: 'column', formationHint: '', image_url: null },
+  { id: 'nf04', name: 'Machina Titan', rarity: 'F', lv: 3, fac: 'Machina', atk: 35, defense: 35, ctype: 'unit', eff: 'Enemies -10 ATK.', img: '', mats: ['nc03', 'nc12'], fusionType: 'vanguard', formationHint: '', image_url: null },
+  { id: 'nf05', name: 'Celestia Dragon', rarity: 'F', lv: 3, fac: 'Celestia', atk: 38, defense: 28, ctype: 'unit', eff: '+15 LP, draw 1.', img: '', mats: ['nc13', 'nc10', 'nc11'], fusionType: 'triangle', formationHint: '', image_url: null },
+  { id: 'nf06', name: 'Wildlands Alpha', rarity: 'F', lv: 2, fac: 'Wildlands', atk: 42, defense: 8, ctype: 'unit', eff: 'Destroy 1 enemy Front.', img: '', mats: ['nc06', 'nc07'], fusionType: 'contact', formationHint: '', image_url: null },
+];
+
 // State demo awal untuk verifikasi interaksi (bukan engine nyata).
 function buildDemoState(cards: Card[]): GameState {
   const byId = (id: string) => cards.find((c) => c.id === id)!;
+  const deckCard = (id: string, uid: string) => inst(byId(id), uid);
   return {
     turn: 1,
     isPlayer: true,
@@ -41,7 +67,7 @@ function buildDemoState(cards: Card[]): GameState {
     eEnergy: 5,
     eEnergyMax: 10,
     eTurnCount: 1,
-    pDeck: [],
+    pDeck: [deckCard('nc04', 'pd1'), deckCard('nc06', 'pd2'), deckCard('nc07', 'pd3'), deckCard('nc09', 'pd4'), deckCard('nc11', 'pd5'), deckCard('nc13', 'pd6')],
     pHand: [
       inst(byId('nc01'), 'h1'),
       inst(byId('nc05'), 'h2'),
@@ -52,9 +78,9 @@ function buildDemoState(cards: Card[]): GameState {
     ],
     pFront: [inst(byId('nc02'), 'pf1'), inst(byId('nc08'), 'pf2'), null],
     pBack: [inst(byId('nc03'), 'pb1'), null, inst(byId('nc12'), 'pb3')],
-    pGY: [],
-    pFusion: [],
-    eDeck: [],
+    pGY: [inst(byId('nc13'), 'pg1')],
+    pFusion: DEMO_FUSIONS.map((f, i) => instF(f, 'pf' + (i + 1))),
+    eDeck: [deckCard('nc01', 'ed1'), deckCard('nc02', 'ed2'), deckCard('nc03', 'ed3'), deckCard('nc05', 'ed4'), deckCard('nc10', 'ed5'), deckCard('nc13', 'ed6')],
     eHand: [
       inst(byId('nc01'), 'eh1'),
       inst(byId('nc02'), 'eh2'),
@@ -64,8 +90,8 @@ function buildDemoState(cards: Card[]): GameState {
     ],
     eFront: [inst(byId('nc04'), 'ef1'), inst(byId('nc06'), 'ef2'), null],
     eBack: [inst(byId('nc07'), 'eb1'), null, inst(byId('nc09'), 'eb3')],
-    eGY: [],
-    eFusion: [],
+    eGY: [inst(byId('nc09'), 'eg1')],
+    eFusion: DEMO_FUSIONS.map((f, i) => instF(f, 'ef' + (i + 1))),
     _negate: false,
     _freeTeleport: false,
     atk: false,
@@ -107,11 +133,72 @@ function Row({ label, row, faceDown, onCardClick }: {
   );
 }
 
+// Pile tertutup (Deck/GY/Fusion) — tampilan count + klik buka modal placeholder.
+function Pile({ icon, count, label, onClick }: {
+  icon: string;
+  count: number;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <div
+      onClick={onClick}
+      title={`${label} — klik untuk detail (placeholder)`}
+      style={{
+        width: 92,
+        height: 132,
+        border: '1.5px dashed #555',
+        borderRadius: 12,
+        background: 'rgba(255,255,255,0.02)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
+        cursor: 'pointer',
+      }}
+    >
+      <div style={{ fontSize: 18 }}>{icon}</div>
+      <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 18, color: '#edeff5' }}>{count}</div>
+      <div style={{ fontSize: 9, color: '#999', textTransform: 'uppercase', letterSpacing: 0.4 }}>{label}</div>
+    </div>
+  );
+}
+
+// Modal placeholder (detail GY/Fusion/Deck diisi nanti).
+function PlaceholderModal({ title, body, onClose }: {
+  title: string;
+  body: string;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(4,5,8,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: '#10121a', border: '1px solid #2e303a', borderRadius: 16, padding: 22, maxWidth: 420, width: '90%' }}
+      >
+        <h2 style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 21, color: '#f0b429', textTransform: 'uppercase', margin: '0 0 12px' }}>{title}</h2>
+        <p style={{ color: '#9ca3af', fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>{body}</p>
+        <button
+          onClick={onClose}
+          style={{ width: '100%', padding: 11, borderRadius: 10, border: '1px solid #2e303a', background: 'rgba(255,255,255,0.05)', color: '#fff', fontFamily: 'Rajdhani, sans-serif', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', cursor: 'pointer' }}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function GameBoard() {
   const [cards, setCards] = useState<Card[] | null>(null);
   const [gs, setGs] = useState<GameState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [modal, setModal] = useState<{ title: string; body: string } | null>(null);
 
   useEffect(() => {
     getCards()
@@ -195,8 +282,19 @@ export default function GameBoard() {
       </div>
 
       <h3 style={{ color: '#f88' }}>Enemy</h3>
-      <Row label="Front" row={gs.eFront} />
-      <Row label="Back" row={gs.eBack} />
+      <div style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
+          <Pile icon="💀" count={gs.eGY.length} label="GY" onClick={() => setModal({ title: 'Enemy Graveyard', body: `${gs.eGY.length} kartu di Graveyard musuh. Daftar detail menyusul.` })} />
+          <Pile icon="🎴" count={gs.eDeck.length} label="Deck" onClick={() => setModal({ title: 'Enemy Deck', body: `${gs.eDeck.length} kartu tersisa (face-down).` })} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <Row label="Front" row={gs.eFront} />
+          <Row label="Back" row={gs.eBack} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
+          <Pile icon="🌀" count={gs.eFusion.length} label="Fusion" onClick={() => setModal({ title: 'Enemy Fusion', body: `${gs.eFusion.length} kartu fusion musuh (face-down).` })} />
+        </div>
+      </div>
       <div style={{ margin: '8px 0', color: '#999', fontSize: 12 }}>
         Enemy Hand: {gs.eHand.length} (face-down)
       </div>
@@ -207,8 +305,19 @@ export default function GameBoard() {
       </div>
 
       <h3 style={{ color: '#8cf', marginTop: 16 }}>Player</h3>
-      <Row label="Front" row={gs.pFront} onCardClick={(c) => returnCard(c.uid)} />
-      <Row label="Back" row={gs.pBack} onCardClick={(c) => returnCard(c.uid)} />
+      <div style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
+          <Pile icon="🌀" count={gs.pFusion.length} label="Fusion" onClick={() => setModal({ title: 'Player Fusion', body: `${gs.pFusion.length} kartu fusion tersedia. Panel fusion menyusul.` })} />
+          <Pile icon="💀" count={gs.pGY.length} label="GY" onClick={() => setModal({ title: 'Player Graveyard', body: `${gs.pGY.length} kartu di Graveyard kamu. Daftar detail menyusul.` })} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <Row label="Front" row={gs.pFront} onCardClick={(c) => returnCard(c.uid)} />
+          <Row label="Back" row={gs.pBack} onCardClick={(c) => returnCard(c.uid)} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
+          <Pile icon="🎴" count={gs.pDeck.length} label="Deck" onClick={() => setModal({ title: 'Player Deck', body: `${gs.pDeck.length} kartu tersisa (face-down).` })} />
+        </div>
+      </div>
       <h4 style={{ color: '#8cf' }}>Hand (klik untuk mainkan)</h4>
       <div style={{ display: 'flex', gap: 8 }}>
         {gs.pHand.length === 0 ? (
@@ -219,9 +328,10 @@ export default function GameBoard() {
       </div>
 
       <p style={{ color: '#666', marginTop: 16, fontSize: 11 }}>
-        (6.7b — klik kartu di Hand untuk mainkan ke slot Front/Back; klik kartu di board untuk
-        kembalikan ke Hand)
+        (6.7a-r1 — 6 pile: Deck/GY/Fusion x player & enemy, klik buka modal placeholder. 6.7b — klik kartu di Hand untuk mainkan; klik kartu di board untuk kembalikan ke Hand)
       </p>
+
+      {modal && <PlaceholderModal title={modal.title} body={modal.body} onClose={() => setModal(null)} />}
     </section>
   );
 }
