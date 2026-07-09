@@ -146,6 +146,9 @@ const BOARD_CSS = `
 .nc-board .enemy-hand .hand-card-wrapper { transform-origin:top center; margin-left:calc(var(--cw) * -0.32); }
 .nc-board .card-back { width:var(--cw); height:var(--ch); border-radius:12px; border:1px solid rgba(255,255,255,0.12); background:repeating-linear-gradient(135deg, #12131c, #12131c 9px, #1a1c28 9px, #1a1c28 18px); flex-shrink:0; box-shadow:0 6px 16px rgba(0,0,0,0.45); }
 .nc-board .empty-slot { width:120px; height:112px; border:1px dashed #333; border-radius:6px; }
+.nc-board .deck-list-container { margin-top:16px; padding:12px 14px; border:1px solid var(--line); border-radius:14px; min-width:0; }
+.nc-board .deck-list-title { font-family:var(--font-display); font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:6px; }
+.nc-board #deck-list-body { display:flex; flex-wrap:wrap; gap:4px; --cw:46px; --ch:64px; }
 `;
 
 // Lingkaran badge LP + Energy (player & enemy). Energy di KEDUA sisi (deviasi disengaja).
@@ -429,6 +432,16 @@ export default function GameBoard() {
         <SideBadge side="you" lp={gs.pLP} energy={gs.pEnergy} energyMax={gs.pEnergyMax} />
         <div className="hand-zone">
           <PlayerHandFan hand={gs.pHand} onPlay={playCard} />
+        </div>
+      </div>
+
+      {/* Deck list panel (prototype #deck-list-body 46x64) — target screenshot ke-3 */}
+      <div className="deck-list-container">
+        <div className="deck-list-title">Your Deck (in play)</div>
+        <div id="deck-list-body">
+          {gs.pDeck.map((c, i) => (
+            <CardView key={i} card={c} />
+          ))}
         </div>
       </div>
 

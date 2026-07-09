@@ -9,7 +9,7 @@ import {
 } from '../api/decks';
 import type { Card, Fusion } from '../types/cards';
 import type { Deck } from '../types/deck';
-import { assetUrl } from '../api/client';
+import { CardView } from '../components/CardView';
 
 interface Selection {
   qty: number;
@@ -25,6 +25,10 @@ interface CatalogItem {
   image_url: string | null;
   is_fusion: boolean;
   sub: string;
+  fac: string;
+  lv: number;
+  atk: number;
+  defense: number;
 }
 
 export default function DeckBuilder() {
@@ -193,6 +197,10 @@ export default function DeckBuilder() {
       image_url: c.image_url,
       is_fusion: false,
       sub: `${c.cost}⚡ ${c.atk}/${c.defense}`,
+      fac: c.fac,
+      lv: c.lv,
+      atk: c.atk,
+      defense: c.defense,
     }));
     const fus: CatalogItem[] = fusions.map((f) => ({
       id: f.id,
@@ -200,6 +208,10 @@ export default function DeckBuilder() {
       image_url: f.image_url,
       is_fusion: true,
       sub: 'Fusion',
+      fac: f.fac,
+      lv: f.lv,
+      atk: f.atk,
+      defense: f.defense,
     }));
     return [...main, ...fus];
   }, [cards, fusions]);
@@ -217,13 +229,6 @@ export default function DeckBuilder() {
     gap: 12,
     alignItems: 'flex-start',
     flexWrap: 'wrap',
-  };
-  const tile: CSSProperties = {
-    border: '1px solid #333',
-    borderRadius: 6,
-    padding: 6,
-    width: 120,
-    textAlign: 'center',
   };
   const btn: CSSProperties = {
     cursor: 'pointer',
@@ -364,35 +369,29 @@ export default function DeckBuilder() {
               <option value="fusion">Fusion</option>
             </select>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {visible.map((it) => {
-              const sel = selections[it.id];
-              const img = assetUrl(it.image_url);
-              return (
-                <div key={it.id} style={tile}>
-                  {img ? (
-                    <img src={img} alt={it.name} style={{ width: 100, height: 70, objectFit: 'contain' }} />
-                  ) : (
-                    <div style={{ width: 100, height: 70, background: '#222', color: '#666', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      no img
-                    </div>
-                  )}
-                  <div style={{ fontSize: 11 }}>{it.name}</div>
-                  <div style={{ fontSize: 10, color: '#999' }}>{it.sub}</div>
-                  <button
-                    style={btn}
-                    data-add={it.id}
-                    data-fusion={it.is_fusion ? '1' : '0'}
-                    onClick={() => addCard(it.id, it.is_fusion)}
-                  >
-                    + Tambah{sel ? ` (${sel.qty})` : ''}
-                  </button>
+
+              <div className="deck-body">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+                  {visible.map((it) => {
+                    const sel = selections[it.id];
+                    return (
+                      <div key={it.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                        <CardView card={it} />
+                        <button
+                          style={btn}
+                          data-add={it.id}
+                          data-fusion={it.is_fusion ? '1' : '0'}
+                          onClick={() => addCard(it.id, it.is_fusion)}
+                        >
+                          + Tambah{sel ? ` (${sel.qty})` : ''}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        </div>
+              </div>
       </div>
+    </div>
     </section>
   );
 }

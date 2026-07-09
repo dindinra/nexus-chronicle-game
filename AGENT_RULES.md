@@ -81,11 +81,17 @@ python -m uvicorn backend.main:app --host 127.0.0.1 --port <port kosong>
 2. Setelah tiap sub-step visual selesai:
  a. Verifikasi computed style via browser_console (getComputedStyle) untuk
     elemen kunci, bandingkan dengan nilai yang sama di prototype asli.
- b. Ambil screenshot ke file (via script terminal, bukan tool bawaan)
-    dan simpan di /screenshots/ — walaupun tidak bisa dianalisis sendiri,
-    ini WAJIB dilampirkan sebagai bukti untuk direview manusia/Claude.
- c. STOP dan tunggu konfirmasi visual dari saya sebelum lanjut ke
+ b. Ambil screenshot ke file (via script terminal / Playwright, bukan tool bawaan)
+    dan simpan di C:\Users\Dindin\nexus-chronicle-game\screenshots\ — walaupun tidak bisa
+    dianalisis sendiri, ini WAJIB dilampirkan sebagai bukti untuk direview manusia/user.
+ c. STOP dan tunggu konfirmasi visual dari user sebelum lanjut ke
     sub-step berikutnya — jangan asumsikan "DOM benar = visual benar".
 
 3. Kalau ragu suatu elemen visual (posisi, bentuk, animasi) tidak jelas dari
- membaca kode CSS-nya saja, TANYA dulu daripada menebak/improvisasi.
+membaca kode CSS-nya saja, TANYA dulu daripada menebak/improvisasi.
+
+4. Ukuran kartu: prototype pakai CSS variable --cw/--ch (default :root 118px/165px,
+di-override per konteks: .deck-body 112px/156px, #deck-list-body 46px/64px, + media query
+viewport). CardView tetap 1 komponen yang pakai var(--cw)/var(--ch); TIAP container
+(arena, deck builder, deck list, hand) yang menentukan ukuran lewat override CSS variable
+di parent — BUKAN prop/varian baru di komponen. (Ini akar penyimpangan visual 6.7a-r2.)

@@ -47,3 +47,6 @@ node_modules/
 *.bak
 *.tmp
 *.temp
+
+# Screenshots (evidence for visual review — kept on disk, not committed)
+screenshots/
