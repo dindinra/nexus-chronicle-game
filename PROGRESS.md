@@ -69,7 +69,10 @@
       - `frontend/src/components/CardView.tsx` (baru): komponen presentational kartu (gambar + nama + stat, mendukung `faceDown`).
       - `frontend/src/pages/GameBoard.tsx`: render zona Enemy/Player (front+back 3 slot) + hand pemain (face-up) + hand musuh (face-down). State demo statis (belum engine).
       - Verifikasi browser (`/game`): console **0 error**, 14 kartu face-up ter-render (nama+stat dari API), 11 gambar kartu load 100%, enemy hand 5 face-down. `npm run build` lolos (34 modules).
-    - [ ] 6.7b Mekanisme mainkan kartu (klik/drag kartu ke slot)
+    - [x] 6.7b Mekanisme mainkan kartu (klik kartu hand -> slot Front/Back; klik kartu board -> kembali ke hand) — **SELESAI & terverifikasi** (2026-07-08)
+      - `frontend/src/components/CardView.tsx`: +prop `onClick` (kartu jadi klik-able, cursor pointer saat ada handler).
+      - `frontend/src/pages/GameBoard.tsx`: state `gs` diangkat ke `useState` (bukan demo statis lagi); handler `playCard(uid)` (hand -> Front dulu, lalu Back) & `returnCard(uid)` (board -> hand). `Row` terima `onCardClick`.
+      - Verifikasi browser (`/game`): console **0 error**; klik kartu hand "Lyria" -> pesan `Mainkan Lyria, Silver Vanguard -> Front slot 3` (hand 6->5); klik kartu board -> `Kembalikan Lyria, Silver Vanguard ke hand` (hand 5->6). `npm run build` lolos (34 modules).
     - [ ] 6.7c Sistem giliran (turn/phase state)
     - [ ] 6.7d Efek kartu (1 kartu/step, cross-check PORTING_CHECKLIST.md) — nf03 & nc13 **TANYA USER dulu**
     - [ ] 6.7e AI lawan

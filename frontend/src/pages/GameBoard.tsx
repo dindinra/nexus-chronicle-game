@@ -1,12 +1,9 @@
-// GameBoard.tsx — Fase 6.7a: render field & hand (tanpa interaksi).
+// GameBoard.tsx — Fase 6.7b: mekanisme mainkan kartu (klik kartu di hand -> slot board).
 //
-// Menampilkan board 3 kolom front/back untuk Enemy & Player, plus hand
-// pemain (face-up) dan hand musuh (face-down). State masih demo statis
-// (belum ada engine / interaksi — itu 6.7b/6.7c/6.7d).
-//
-// Data kartu di-fetch dari backend /cards (sama seperti CardList 6.4) sehingga
-// gambar & nama asli muncul. Engine state (GameState) baru demo; nanti 6.7c
-// akan diganti dengan store nyata.
+// 6.7a: render-only (state demo statis).
+// 6.7b: hand card clickable -> main ke slot player (Front dulu, lalu Back).
+//        board card (player) clickable -> kembalikan ke hand.
+//        State nyata via useState (bukan demo statis lagi). Engine belum ada (6.7c/6.7d).
 
 import { useEffect, useState } from 'react';
 import { getCards } from '../api/cards';
@@ -27,7 +24,7 @@ function inst(card: Card, uid: string): BoardCard {
   };
 }
 
-// State demo untuk verifikasi layout visual (bukan engine nyata).
+// State demo awal untuk verifikasi interaksi (bukan engine nyata).
 function buildDemoState(cards: Card[]): GameState {
   const byId = (id: string) => cards.find((c) => c.id === id)!;
   return {
@@ -75,7 +72,12 @@ function buildDemoState(cards: Card[]): GameState {
   };
 }
 
-function Row({ label, row, faceDown }: { label: string; row: BoardRow; faceDown?: boolean }) {
+function Row({ label, row, faceDown, onCardClick }: {
+  label: string;
+  row: BoardRow;
+  faceDown?: boolean;
+  onCardClick?: (c: BoardCard, i: number) => void;
+}) {
   return (
     <div style={{ margin: '6px 0' }}>
       <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>{label}</div>
@@ -93,7 +95,11 @@ function Row({ label, row, faceDown }: { label: string; row: BoardRow; faceDown?
               justifyContent: 'center',
             }}
           >
-            {c ? <CardView card={c} faceDown={faceDown} /> : <span style={{ color: '#555' }}>empty</span>}
+            {c ? (
+              <CardView card={c} faceDown={faceDown} onClick={onCardClick ? () => onCardClick(c, i) : undefined} />
+            ) : (
+              <span style={{ color: '#555' }}>empty</span>
+            )}
           </div>
         ))}
       </div>
@@ -103,13 +109,62 @@ function Row({ label, row, faceDown }: { label: string; row: BoardRow; faceDown?
 
 export default function GameBoard() {
   const [cards, setCards] = useState<Card[] | null>(null);
+  const [gs, setGs] = useState<GameState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
     getCards()
-      .then(setCards)
+      .then((cs) => {
+        setCards(cs);
+        setGs(buildDemoState(cs));
+      })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
   }, []);
+
+  const playCard = (uid: string) => {
+    const prev = gs;
+    if (!prev) return;
+    const card = prev.pHand.find((c) => c.uid === uid);
+    if (!card) return;
+    let key: 'pFront' | 'pBack' = 'pFront';
+    let idx = prev.pFront.findIndex((s) => s === null);
+    if (idx === -1) {
+      key = 'pBack';
+      idx = prev.pBack.findIndex((s) => s === null);
+    }
+    if (idx === -1) {
+      setMsg('Player Front & Back penuh — tidak bisa mainkan kartu');
+      return;
+    }
+    const newHand = prev.pHand.filter((c) => c.uid !== uid);
+    const newRow = [...prev[key]] as BoardRow;
+    newRow[idx] = card;
+    setMsg(`Mainkan ${card.name} -> ${key === 'pFront' ? 'Front' : 'Back'} slot ${idx + 1}`);
+    setGs({ ...prev, pHand: newHand, [key]: newRow });
+  };
+
+  const returnCard = (uid: string) => {
+    const prev = gs;
+    if (!prev) return;
+    const fi = prev.pFront.findIndex((c) => c && c.uid === uid);
+    const bi = prev.pBack.findIndex((c) => c && c.uid === uid);
+    let key: 'pFront' | 'pBack' | null = null;
+    let idx = -1;
+    if (fi !== -1) {
+      key = 'pFront';
+      idx = fi;
+    } else if (bi !== -1) {
+      key = 'pBack';
+      idx = bi;
+    }
+    if (!key) return;
+    const card = prev[key][idx] as BoardCard;
+    const newRow = [...prev[key]] as BoardRow;
+    newRow[idx] = null;
+    setMsg(`Kembalikan ${card.name} ke hand`);
+    setGs({ ...prev, [key]: newRow, pHand: [...prev.pHand, card] });
+  };
 
   if (error) {
     return (
@@ -119,7 +174,7 @@ export default function GameBoard() {
       </section>
     );
   }
-  if (!cards) {
+  if (!cards || !gs) {
     return (
       <section style={{ padding: 24 }}>
         <h1>Game Board</h1>
@@ -128,11 +183,12 @@ export default function GameBoard() {
     );
   }
 
-  const gs = buildDemoState(cards);
-
   return (
     <section style={{ padding: 24, minHeight: '100vh', background: '#0f0f0f' }}>
       <h1>Game Board</h1>
+      {msg && (
+        <p style={{ color: '#6f6', background: '#143', padding: 8, borderRadius: 4 }}>{msg}</p>
+      )}
       <div style={{ marginBottom: 12, color: '#ccc', fontSize: 13 }}>
         Turn {gs.turn} · Phase {gs.phase} · Player LP {gs.pLP} / Enemy LP {gs.eLP} · Energy{' '}
         {gs.pEnergy}/{gs.pEnergyMax}
@@ -151,17 +207,20 @@ export default function GameBoard() {
       </div>
 
       <h3 style={{ color: '#8cf', marginTop: 16 }}>Player</h3>
-      <Row label="Front" row={gs.pFront} />
-      <Row label="Back" row={gs.pBack} />
-      <h4 style={{ color: '#8cf' }}>Hand</h4>
+      <Row label="Front" row={gs.pFront} onCardClick={(c) => returnCard(c.uid)} />
+      <Row label="Back" row={gs.pBack} onCardClick={(c) => returnCard(c.uid)} />
+      <h4 style={{ color: '#8cf' }}>Hand (klik untuk mainkan)</h4>
       <div style={{ display: 'flex', gap: 8 }}>
-        {gs.pHand.map((c) => (
-          <CardView key={c.uid} card={c} />
-        ))}
+        {gs.pHand.length === 0 ? (
+          <span style={{ color: '#555' }}>hand kosong</span>
+        ) : (
+          gs.pHand.map((c) => <CardView key={c.uid} card={c} onClick={() => playCard(c.uid)} />)
+        )}
       </div>
 
       <p style={{ color: '#666', marginTop: 16, fontSize: 11 }}>
-        (6.7a — render-only, belum ada interaksi / engine)
+        (6.7b — klik kartu di Hand untuk mainkan ke slot Front/Back; klik kartu di board untuk
+        kembalikan ke Hand)
       </p>
     </section>
   );

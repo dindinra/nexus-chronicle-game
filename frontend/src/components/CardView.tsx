@@ -28,7 +28,7 @@ const backStyle: CSSProperties = {
   fontFamily: 'monospace',
 };
 
-export function CardView({ card, faceDown }: { card: Card; faceDown?: boolean }) {
+export function CardView({ card, faceDown, onClick }: { card: Card; faceDown?: boolean; onClick?: () => void }) {
   if (faceDown) {
     return <div style={backStyle}>?</div>;
   }
@@ -36,7 +36,9 @@ export function CardView({ card, faceDown }: { card: Card; faceDown?: boolean })
   const color = FAC_COLOR[card.fac] ?? '#888';
   return (
     <div
+      onClick={onClick}
       style={{
+        cursor: onClick ? 'pointer' : 'default',
         border: `2px solid ${color}`,
         borderRadius: 6,
         width: 120,
