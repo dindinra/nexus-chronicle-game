@@ -65,6 +65,14 @@ export function postJson<T>(path: string, body: unknown): Promise<T> {
   return request<T>(path, { method: 'POST', body: JSON.stringify(body) });
 }
 
+export function putJson<T>(path: string, body: unknown): Promise<T> {
+  return request<T>(path, { method: 'PUT', body: JSON.stringify(body) });
+}
+
+export function deleteJson<T>(path: string): Promise<T> {
+  return request<T>(path, { method: 'DELETE' });
+}
+
 // image_url dari backend berupa path relatif ("/static/cards/xxx.png").
 // Untuk ditampilkan di <img> React, harus di-prefix base URL backend.
 export function assetUrl(url: string | null | undefined): string | null {
