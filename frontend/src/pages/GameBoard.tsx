@@ -1,10 +1,18 @@
-// GameBoard.tsx — Fase 6.7b: mekanisme mainkan kartu (klik kartu di hand -> slot board).
+// GameBoard.tsx — Fase 6.7a-r2: perbaiki layout ke struktur prototype (badge LP+Energy kedua sisi,
+// enemy hand fan card-back, pile di-dalam row-group).
 //
-// 6.7a-r1: tambah 6 pile (Deck/GY/Fusion x player & enemy) dengan count + klik -> modal placeholder.
-// 6.7a: render-only (state demo statis).
-// 6.7b: hand card clickable -> main ke slot player (Front dulu, lalu Back).
-//        board card (player) clickable -> kembalikan ke hand (AKAN DIHAPUS di r8).
-//        State nyata via useState (bukan demo statis lagi). Engine belum ada (6.7c/6.7d).
+// Acuan porting (SPESIFIKASI MENGIKAT): frontend/_legacy-reference/index.html
+//   - Struktur arena: baris 729-785 (row-group grid 3 kolom: pile kiri / row-slots tengah / pile kanan)
+//   - Grid .row-group: baris 248-254 (grid-template-columns: var(--cw) 1fr var(--cw))
+//   - renderFan: baris 1409-1429 (rotasi + translateY per kartu)
+//   - .enemy-hand .hand-card-wrapper: baris 309 (transform-origin top center)
+//   - .card-back: baris 331
+//   - .player-badge / .pb-lp / .pb-energy: baris 156-174
+//   - DEVIASI DISENGAJA (putusan user 2026-07-09): .pb-energy JUGA dipasang di enemy-badge
+//     (prototype asli cuma di you-badge) -> supaya HUD simetris & energy musuh kelihatan.
+//
+// 6.7b (interaksi) dipertahankan: klik kartu Hand -> mainkan; klik kartu board player -> kembalikan.
+// Engine belum ada (6.7c/6.7d).
 
 import { useEffect, useState } from 'react';
 import { getCards } from '../api/cards';
@@ -98,69 +106,152 @@ function buildDemoState(cards: Card[]): GameState {
   };
 }
 
-function Row({ label, row, faceDown, onCardClick }: {
-  label: string;
-  row: BoardRow;
-  faceDown?: boolean;
-  onCardClick?: (c: BoardCard, i: number) => void;
+// ── CSS (port persis dari prototype, di-scope di bawah .nc-board) ──
+const BOARD_CSS = `
+.nc-board {
+  --cw: 118px; --ch: 165px; --hand-zone-h: 192px;
+  --arena-gap: 14px; --radius: 14px;
+  --text-muted: #878c9c; --gold: #f0b429; --red: #ff5470;
+  --green: #34d399; --purple: #a78bfa;
+  --font-display: 'Rajdhani', sans-serif;
+  --panel-bg-solid: #10121a; --panel-border: rgba(255,255,255,0.09);
+}
+.nc-board .hand-row { display:flex; align-items:center; gap:14px; height:var(--hand-zone-h); flex-shrink:0; }
+.nc-board .hand-row .hand-zone { flex:1; height:100%; }
+.nc-board .player-badge { flex-shrink:0; width:74px; height:74px; border-radius:50%; background:var(--panel-bg-solid); border:2px solid var(--panel-border); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; box-shadow:0 8px 20px rgba(0,0,0,.45); position:relative; }
+.nc-board .player-badge.enemy-badge { border-color: rgba(255,84,112,.45); }
+.nc-board .player-badge.you-badge { border-color: rgba(52,211,153,.45); }
+.nc-board .pb-avatar { font-size:21px; line-height:1; opacity:.9; }
+.nc-board .pb-lp { font-family:var(--font-display); font-weight:800; font-size:17px; line-height:1.3; }
+.nc-board .enemy-badge .pb-lp { color:var(--red); }
+.nc-board .you-badge .pb-lp { color:var(--green); }
+.nc-board .pb-label { font-size:7px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+.nc-board .pb-energy { position:absolute; bottom:-9px; left:50%; transform:translateX(-50%); background:rgba(6,7,11,.92); border:1px solid var(--gold); border-radius:10px; padding:1px 8px; font-family:var(--font-display); font-weight:700; font-size:10px; color:var(--gold); white-space:nowrap; }
+.nc-board .enemy-rows-wrap, .nc-board .player-rows-wrap { display:flex; flex-direction:column; gap:var(--arena-gap); align-items:center; padding:8px 14px; border-radius:14px; border:1px solid transparent; }
+.nc-board .row-group { display:grid; grid-template-columns:var(--cw) 1fr var(--cw); align-items:center; gap:var(--arena-gap); position:relative; }
+.nc-board .row-slots { display:flex; gap:var(--arena-gap); grid-column:2; justify-self:center; }
+.nc-board .row-label { position:absolute; left:-18px; top:50%; transform:translateY(-50%) rotate(180deg); font-family:var(--font-display); font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:2px; writing-mode:vertical-rl; opacity:.45; }
+.nc-board .field-pile-slot { grid-column:1; justify-self:end; display:flex; align-items:center; }
+.nc-board .field-pile-slot.side-right { grid-column:3; justify-self:start; }
+.nc-board .field-pile { width:var(--cw); height:var(--ch); border-radius:var(--radius); background:rgba(255,255,255,0.02); border:1.5px dashed rgba(255,255,255,0.1); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; }
+.nc-board .field-pile.fusion { border-color:rgba(167,139,250,.35); }
+.nc-board .pile-icon { font-size:16px; margin-bottom:4px; opacity:.85; }
+.nc-board .pile-count { font-family:var(--font-display); font-size:18px; font-weight:700; }
+.nc-board .pile-label { font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; }
+.nc-board .field-divider { height:1px; width:60%; margin:14px auto; background:linear-gradient(90deg, transparent, rgba(255,255,255,0.14), transparent); }
+.nc-board .hand-zone { height:var(--hand-zone-h); flex-shrink:0; display:flex; justify-content:center; align-items:center; position:relative; perspective:1000px; z-index:20; }
+.nc-board .hand-container { display:flex; justify-content:center; align-items:center; position:relative; width:100%; height:100%; }
+.nc-board .hand-card-wrapper { position:relative; margin-left:calc(var(--cw) * -0.42); transition:transform 0.25s cubic-bezier(0.2,0.8,0.2,1), margin 0.25s; transform-origin:bottom center; cursor:pointer; }
+.nc-board .hand-card-wrapper:first-child { margin-left:0; }
+.nc-board .enemy-hand .hand-card-wrapper { transform-origin:top center; margin-left:calc(var(--cw) * -0.32); }
+.nc-board .card-back { width:var(--cw); height:var(--ch); border-radius:12px; border:1px solid rgba(255,255,255,0.12); background:repeating-linear-gradient(135deg, #12131c, #12131c 9px, #1a1c28 9px, #1a1c28 18px); flex-shrink:0; box-shadow:0 6px 16px rgba(0,0,0,0.45); }
+.nc-board .empty-slot { width:120px; height:112px; border:1px dashed #333; border-radius:6px; }
+`;
+
+// Lingkaran badge LP + Energy (player & enemy). Energy di KEDUA sisi (deviasi disengaja).
+function SideBadge({ side, lp, energy, energyMax }: {
+  side: 'you' | 'enemy';
+  lp: number;
+  energy: number;
+  energyMax: number;
 }) {
+  const isYou = side === 'you';
   return (
-    <div style={{ margin: '6px 0' }}>
-      <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>{label}</div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        {row.map((c, i) => (
-          <div
-            key={i}
-            style={{
-              width: 124,
-              minHeight: 112,
-              border: '1px dashed #444',
-              borderRadius: 6,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {c ? (
-              <CardView card={c} faceDown={faceDown} onClick={onCardClick ? () => onCardClick(c, i) : undefined} />
-            ) : (
-              <span style={{ color: '#555' }}>empty</span>
-            )}
-          </div>
-        ))}
-      </div>
+    <div className={`player-badge ${isYou ? 'you-badge' : 'enemy-badge'}`}>
+      <div className="pb-avatar">{isYou ? '🧑' : '👹'}</div>
+      <div className="pb-lp">{lp}</div>
+      <div className="pb-label">{isYou ? 'You' : 'Enemy'}</div>
+      <div className="pb-energy">⚡ {energy}/{energyMax}</div>
     </div>
   );
 }
 
-// Pile tertutup (Deck/GY/Fusion) — tampilan count + klik buka modal placeholder.
-function Pile({ icon, count, label, onClick }: {
+// Pile (GY/Deck/Fusion) di dalam row-group.
+function FieldPile({ icon, count, label, fusion, onClick }: {
   icon: string;
   count: number;
   label: string;
+  fusion?: boolean;
   onClick: () => void;
 }) {
   return (
-    <div
-      onClick={onClick}
-      title={`${label} — klik untuk detail (placeholder)`}
-      style={{
-        width: 92,
-        height: 132,
-        border: '1.5px dashed #555',
-        borderRadius: 12,
-        background: 'rgba(255,255,255,0.02)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 4,
-        cursor: 'pointer',
-      }}
-    >
-      <div style={{ fontSize: 18 }}>{icon}</div>
-      <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 18, color: '#edeff5' }}>{count}</div>
-      <div style={{ fontSize: 9, color: '#999', textTransform: 'uppercase', letterSpacing: 0.4 }}>{label}</div>
+    <div className={`field-pile ${fusion ? 'fusion' : ''}`} onClick={onClick}>
+      <div className="pile-icon">{icon}</div>
+      <div className="pile-count">{count}</div>
+      <div className="pile-label">{label}</div>
+    </div>
+  );
+}
+
+// Row slot field (Front/Back) — kartu face-up, klik (player) -> returnCard.
+function FieldRow({ row, onCardClick }: {
+  row: BoardRow;
+  onCardClick?: (c: BoardCard, i: number) => void;
+}) {
+  return (
+    <div className="row-slots">
+      {row.map((c, i) =>
+        c ? (
+          <CardView
+            key={i}
+            card={c}
+            onClick={onCardClick ? () => onCardClick(c, i) : undefined}
+          />
+        ) : (
+          <div key={i} className="empty-slot" />
+        ),
+      )}
+    </div>
+  );
+}
+
+// Enemy hand = fan kartu back (tanpa label teks), sesuai renderFan prototype (baris 1409-1429).
+function EnemyHandFan({ hand }: { hand: BoardCard[] }) {
+  const total = hand.length;
+  return (
+    <div className="hand-container">
+      {hand.map((_, i) => {
+        const center = (total - 1) / 2;
+        const offset = i - center;
+        const angle = -(offset * 5);
+        const yOff = Math.min(Math.abs(offset) * Math.abs(offset) * 1.5, 15);
+        return (
+          <div
+            key={i}
+            className="hand-card-wrapper"
+            style={{ transform: `rotate(${angle}deg) translateY(${-yOff}px)`, zIndex: i }}
+          >
+            <div className="card-back" />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Player hand = fan kartu klik-able (6.7b: klik -> mainkan).
+function PlayerHandFan({ hand, onPlay }: {
+  hand: BoardCard[];
+  onPlay: (uid: string) => void;
+}) {
+  const total = hand.length;
+  return (
+    <div className="hand-container">
+      {hand.map((c, i) => {
+        const center = (total - 1) / 2;
+        const offset = i - center;
+        const angle = offset * 5;
+        const yOff = Math.min(Math.abs(offset) * Math.abs(offset) * 1.5, 15);
+        return (
+          <div
+            key={c.uid}
+            className="hand-card-wrapper"
+            style={{ transform: `rotate(${angle}deg) translateY(${yOff}px)`, zIndex: i }}
+          >
+            <CardView card={c} onClick={() => onPlay(c.uid)} />
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -255,7 +346,7 @@ export default function GameBoard() {
 
   if (error) {
     return (
-      <section style={{ padding: 24 }}>
+      <section className="nc-board" style={{ padding: 24 }}>
         <h1>Game Board</h1>
         <p style={{ color: '#f66' }}>{error}</p>
       </section>
@@ -263,7 +354,7 @@ export default function GameBoard() {
   }
   if (!cards || !gs) {
     return (
-      <section style={{ padding: 24 }}>
+      <section className="nc-board" style={{ padding: 24 }}>
         <h1>Game Board</h1>
         <p>Loading…</p>
       </section>
@@ -271,64 +362,78 @@ export default function GameBoard() {
   }
 
   return (
-    <section style={{ padding: 24, minHeight: '100vh', background: '#0f0f0f' }}>
+    <section className="nc-board" style={{ padding: 24, minHeight: '100vh', background: '#0f0f0f' }}>
+      <style>{BOARD_CSS}</style>
       <h1>Game Board</h1>
       {msg && (
         <p style={{ color: '#6f6', background: '#143', padding: 8, borderRadius: 4 }}>{msg}</p>
       )}
       <div style={{ marginBottom: 12, color: '#ccc', fontSize: 13 }}>
-        Turn {gs.turn} · Phase {gs.phase} · Player LP {gs.pLP} / Enemy LP {gs.eLP} · Energy{' '}
-        {gs.pEnergy}/{gs.pEnergyMax}
+        Turn {gs.turn} · Phase {gs.phase}
       </div>
 
-      <h3 style={{ color: '#f88' }}>Enemy</h3>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
-          <Pile icon="💀" count={gs.eGY.length} label="GY" onClick={() => setModal({ title: 'Enemy Graveyard', body: `${gs.eGY.length} kartu di Graveyard musuh. Daftar detail menyusul.` })} />
-          <Pile icon="🎴" count={gs.eDeck.length} label="Deck" onClick={() => setModal({ title: 'Enemy Deck', body: `${gs.eDeck.length} kartu tersisa (face-down).` })} />
+      {/* Enemy hand row: badge (LP+Energy) + fan card-back */}
+      <div className="hand-row enemy-hand-row">
+        <SideBadge side="enemy" lp={gs.eLP} energy={gs.eEnergy} energyMax={gs.eEnergyMax} />
+        <div className="hand-zone enemy-hand">
+          <EnemyHandFan hand={gs.eHand} />
         </div>
-        <div style={{ flex: 1 }}>
-          <Row label="Front" row={gs.eFront} />
-          <Row label="Back" row={gs.eBack} />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
-          <Pile icon="🌀" count={gs.eFusion.length} label="Fusion" onClick={() => setModal({ title: 'Enemy Fusion', body: `${gs.eFusion.length} kartu fusion musuh (face-down).` })} />
-        </div>
-      </div>
-      <div style={{ margin: '8px 0', color: '#999', fontSize: 12 }}>
-        Enemy Hand: {gs.eHand.length} (face-down)
-      </div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        {gs.eHand.map((c, i) => (
-          <CardView key={i} card={c} faceDown />
-        ))}
       </div>
 
-      <h3 style={{ color: '#8cf', marginTop: 16 }}>Player</h3>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
-          <Pile icon="🌀" count={gs.pFusion.length} label="Fusion" onClick={() => setModal({ title: 'Player Fusion', body: `${gs.pFusion.length} kartu fusion tersedia. Panel fusion menyusul.` })} />
-          <Pile icon="💀" count={gs.pGY.length} label="GY" onClick={() => setModal({ title: 'Player Graveyard', body: `${gs.pGY.length} kartu di Graveyard kamu. Daftar detail menyusul.` })} />
+      {/* Arena: enemy rows */}
+      <div className="enemy-rows-wrap">
+        <div className="row-group">
+          <div className="row-label">DEF</div>
+          <div className="field-pile-slot">
+            <FieldPile icon="💀" count={gs.eGY.length} label="GY" onClick={() => setModal({ title: 'Enemy Graveyard', body: `${gs.eGY.length} kartu di Graveyard musuh.` })} />
+          </div>
+          <FieldRow row={gs.eBack} />
+          <div className="field-pile-slot side-right">
+            <FieldPile icon="🎴" count={gs.eDeck.length} label="Deck" onClick={() => setModal({ title: 'Enemy Deck', body: `${gs.eDeck.length} kartu tersisa (face-down).` })} />
+          </div>
         </div>
-        <div style={{ flex: 1 }}>
-          <Row label="Front" row={gs.pFront} onCardClick={(c) => returnCard(c.uid)} />
-          <Row label="Back" row={gs.pBack} onCardClick={(c) => returnCard(c.uid)} />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
-          <Pile icon="🎴" count={gs.pDeck.length} label="Deck" onClick={() => setModal({ title: 'Player Deck', body: `${gs.pDeck.length} kartu tersisa (face-down).` })} />
+        <div className="row-group">
+          <div className="row-label" style={{ color: 'var(--red)' }}>ATK</div>
+          <div className="field-pile-slot">
+            <FieldPile icon="🌀" count={gs.eFusion.length} label="Fusion" fusion onClick={() => setModal({ title: 'Enemy Fusion', body: `${gs.eFusion.length} kartu fusion musuh (face-down).` })} />
+          </div>
+          <FieldRow row={gs.eFront} />
         </div>
       </div>
-      <h4 style={{ color: '#8cf' }}>Hand (klik untuk mainkan)</h4>
-      <div style={{ display: 'flex', gap: 8 }}>
-        {gs.pHand.length === 0 ? (
-          <span style={{ color: '#555' }}>hand kosong</span>
-        ) : (
-          gs.pHand.map((c) => <CardView key={c.uid} card={c} onClick={() => playCard(c.uid)} />)
-        )}
+
+      <div className="field-divider" />
+
+      {/* Arena: player rows */}
+      <div className="player-rows-wrap">
+        <div className="row-group">
+          <div className="row-label" style={{ color: 'var(--red)' }}>ATK</div>
+          <div className="field-pile-slot">
+            <FieldPile icon="🌀" count={gs.pFusion.length} label="Fusion" fusion onClick={() => setModal({ title: 'Player Fusion', body: `${gs.pFusion.length} kartu fusion tersedia.` })} />
+          </div>
+          <FieldRow row={gs.pFront} onCardClick={(c) => returnCard(c.uid)} />
+        </div>
+        <div className="row-group">
+          <div className="row-label">DEF</div>
+          <div className="field-pile-slot">
+            <FieldPile icon="💀" count={gs.pGY.length} label="GY" onClick={() => setModal({ title: 'Player Graveyard', body: `${gs.pGY.length} kartu di Graveyard kamu.` })} />
+          </div>
+          <FieldRow row={gs.pBack} onCardClick={(c) => returnCard(c.uid)} />
+          <div className="field-pile-slot side-right">
+            <FieldPile icon="🎴" count={gs.pDeck.length} label="Deck" onClick={() => setModal({ title: 'Player Deck', body: `${gs.pDeck.length} kartu tersisa (face-down).` })} />
+          </div>
+        </div>
+      </div>
+
+      {/* Player hand row: badge (LP+Energy) + fan kartu klik-able */}
+      <div className="hand-row player-hand-row">
+        <SideBadge side="you" lp={gs.pLP} energy={gs.pEnergy} energyMax={gs.pEnergyMax} />
+        <div className="hand-zone">
+          <PlayerHandFan hand={gs.pHand} onPlay={playCard} />
+        </div>
       </div>
 
       <p style={{ color: '#666', marginTop: 16, fontSize: 11 }}>
-        (6.7a-r1 — 6 pile: Deck/GY/Fusion x player & enemy, klik buka modal placeholder. 6.7b — klik kartu di Hand untuk mainkan; klik kartu di board untuk kembalikan ke Hand)
+        (6.7a-r2 — badge LP+Energy kedua sisi; enemy hand fan card-back; pile di-dalam row-group. 6.7b — klik kartu Hand untuk mainkan; klik kartu board untuk kembalikan.)
       </p>
 
       {modal && <PlaceholderModal title={modal.title} body={modal.body} onClose={() => setModal(null)} />}
