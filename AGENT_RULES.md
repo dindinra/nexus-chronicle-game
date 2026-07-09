@@ -70,3 +70,22 @@ python -m uvicorn backend.main:app --host 127.0.0.1 --port <port kosong>
   5. Di ringkasan "STEP SELESAI", tambahkan baris: `Pushed to GitHub: [commit hash] — [ls-remote match: ya/tidak]`.
 - **KALAU PUSH GAGAL** (auth error, conflict, dll): STOP & LAPOR — JANGAN force-push / jangan coba workaround sendiri tanpa persetujuan user.
 - Catatan env: `gh` CLI TIDAK terpasang di host ini. Push pakai Personal Access Token (PAT) — buat repo via GitHub REST API, lalu `git push -u https://USER:$TOKEN@github.com/USER/REPO.git master`, lalu reset URL remote ke bentuk tanpa token + `git credential reject` agar token tidak tersisa di `.git/config`.
+
+## 10. Verifikasi Visual (untuk agent tanpa vision/screenshot)
+
+1. CSS WAJIB DI-COPY VERBATIM dari prototype (_legacy-reference/index.html),
+ bukan ditulis ulang dari interpretasi. Sesuaikan HANYA selector/className
+ ke struktur React, nilai CSS (warna, ukuran, posisi, grid, transform)
+ HARUS identik dengan aslinya.
+
+2. Setelah tiap sub-step visual selesai:
+ a. Verifikasi computed style via browser_console (getComputedStyle) untuk
+    elemen kunci, bandingkan dengan nilai yang sama di prototype asli.
+ b. Ambil screenshot ke file (via script terminal, bukan tool bawaan)
+    dan simpan di /screenshots/ — walaupun tidak bisa dianalisis sendiri,
+    ini WAJIB dilampirkan sebagai bukti untuk direview manusia/Claude.
+ c. STOP dan tunggu konfirmasi visual dari saya sebelum lanjut ke
+    sub-step berikutnya — jangan asumsikan "DOM benar = visual benar".
+
+3. Kalau ragu suatu elemen visual (posisi, bentuk, animasi) tidak jelas dari
+ membaca kode CSS-nya saja, TANYA dulu daripada menebak/improvisasi.
