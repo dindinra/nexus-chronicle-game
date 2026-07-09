@@ -64,6 +64,15 @@
     - `frontend/src/api/client.ts`: +`putJson`/`deleteJson` helper (untuk PUT/DELETE deck).
     - `frontend/src/pages/DeckBuilder.tsx`: UI 3 kolom (Daftar Deck / Editor / Katalog), validasi 30 main + ≤6 fusion, create/edit/activate/delete via API.
     - Verifikasi E2E browser: login → `/deck-builder`, console **0 error**, buat deck "Deck Test 6.6" (30 kartu) → `POST /decks` persist di DB (GET /decks return `id 5`, `total_cards 30`). `npm run build` lolos (tsc + vite, 33 modules).
+  - [ ] 6.7 Porting logic game (engine + interaksi) — **IN PROGRESS (2026-07-08)**
+    - [x] 6.7a Render field & hand (board 3 kolom front/back + hand, tanpa interaksi) — **SELESAI & terverifikasi** (2026-07-08)
+      - `frontend/src/components/CardView.tsx` (baru): komponen presentational kartu (gambar + nama + stat, mendukung `faceDown`).
+      - `frontend/src/pages/GameBoard.tsx`: render zona Enemy/Player (front+back 3 slot) + hand pemain (face-up) + hand musuh (face-down). State demo statis (belum engine).
+      - Verifikasi browser (`/game`): console **0 error**, 14 kartu face-up ter-render (nama+stat dari API), 11 gambar kartu load 100%, enemy hand 5 face-down. `npm run build` lolos (34 modules).
+    - [ ] 6.7b Mekanisme mainkan kartu (klik/drag kartu ke slot)
+    - [ ] 6.7c Sistem giliran (turn/phase state)
+    - [ ] 6.7d Efek kartu (1 kartu/step, cross-check PORTING_CHECKLIST.md) — nf03 & nc13 **TANYA USER dulu**
+    - [ ] 6.7e AI lawan
 - [ ] Fase 7..10 — belum
 
 ## Decisions Pending (jangan diputuskan sendiri)
