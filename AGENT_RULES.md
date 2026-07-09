@@ -56,6 +56,7 @@ python -m uvicorn backend.main:app --host 127.0.0.1 --port <port kosong>
 - Kalau diff **BERSIH** (cuma perubahan yang agent tulis sendiri, tidak ada baris asing/tertimpa), itu aman lanjut — kemungkinan besar bug di sistem warning tool, bukan sibling beneran.
 - Kalau diff **MENUNJUKKAN perubahan asing** yang bukan dari agent → STOP & lapor (jangan di-overwrite).
 - Konteks: 2026-07-08 warning muncul saat patch `PROGRESS.md` (6.2), tapi `git diff` membuktikan hanya perubahan agent sendiri → false-positive. Tidak ada data hilang.
+- **HIPOTESIS TERKUAT (2026-07-08):** warning sibling subagent kemungkinan besar terkait **pergantian API key / restart sesi** — platform mendaftarkan sesi/agent baru tanpa riwayat baca file dari sesi sebelumnya (pola sama persis dgn investigasi-investigasi sebelumnya yang selalu berujung "tidak ada konten asing"). Sejauh ini **SELALU** terbukti false-positive lewat `git diff`. Tetap **WAJIB verifikasi `git diff` tiap kali muncul**, tapi **tidak perlu panik-stop total** seperti awal-awal — cukup verifikasi lalu lanjut kalau bersih.
 
 ## 9. Auto-Push ke GitHub (setiap FASE selesai)
 - **PUSH OTOMATIS:** setiap kali SATU FASE PENUH selesai & sudah di-commit lokal, LANGSUNG push ke GitHub — jangan tunggu user minta.
