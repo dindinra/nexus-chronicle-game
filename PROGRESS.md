@@ -59,6 +59,11 @@
     - API client diperkuat: token (localStorage) + header `Authorization: Bearer` otomatis di `fetchJson`, plus `postJson` untuk POST (`src/api/client.ts`). Modul auth baru (`src/api/auth.ts`: `login`/`register`/`getMe`). `Login.tsx` di-rewrite: form login/register, simpan JWT, panggil `/auth/me` untuk verifikasi identity.
     - Verifikasi browser (http://127.0.0.1:5173/login): register user → login → token JWT (HS256) tersimpan → `GET /auth/me` return `hermes_test (id 3)`. **0 error** CORS/network di console.
     - `npm run build` lolos (tsc -b + vite build, 32 modules).
+  - [x] 6.6 Deck Builder terhubung Deck API — **SELESAI & terverifikasi** (2026-07-08)
+    - `frontend/src/api/decks.ts` (baru): client API deck (`listDecks`/`getDeck`/`createDeck`/`updateDeck`/`deleteDeck`/`activateDeck`) → `backend/routers/decks.py`.
+    - `frontend/src/api/client.ts`: +`putJson`/`deleteJson` helper (untuk PUT/DELETE deck).
+    - `frontend/src/pages/DeckBuilder.tsx`: UI 3 kolom (Daftar Deck / Editor / Katalog), validasi 30 main + ≤6 fusion, create/edit/activate/delete via API.
+    - Verifikasi E2E browser: login → `/deck-builder`, console **0 error**, buat deck "Deck Test 6.6" (30 kartu) → `POST /decks` persist di DB (GET /decks return `id 5`, `total_cards 30`). `npm run build` lolos (tsc + vite, 33 modules).
 - [ ] Fase 7..10 — belum
 
 ## Decisions Pending (jangan diputuskan sendiri)
