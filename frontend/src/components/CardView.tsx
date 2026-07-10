@@ -1,23 +1,14 @@
 // CardView.tsx — komponen presentational kartu (Fase 6.7a).
-// Ukuran MENGGUNAKAN var(--cw)/var(--ch) (sesuai prototype baris 316-319 & 331):
-// tiap container (arena 118/165, deck-builder 112/156, deck-list 46/64) override lewat
-// parent. JANGAN hardcode width/height di sini — itu akar penyimpangan visual 6.7a-r2.
+// Struktur & nilai CSS di-port VERBATIM dari prototype cardHTML() + .c-* rules
+// (index.html baris 1447 & 334-350): layout ABSOLUTE-OVERLAY supaya teks
+// (nama / ATK / DEF) menimpa art full-bleed dan TIDAK ter-clip overflow:hidden.
+// Ukuran pakai var(--cw)/var(--ch); tiap container (arena 118/165, deck-builder
+// 112/156, deck-list 46/64) override lewat parent. JANGAN hardcode width/height.
 // faceDown -> render .card-back (prototype baris 331).
 
 import type { CSSProperties } from 'react';
 import { assetUrl } from '../api/client';
-
-// Minimal shape yang dipakai untuk render — cukup field yg dibutuhkan tampilan.
-// BoardCard (GameBoard) dan item katalog (DeckBuilder) sama-sama kompatibel.
-export type CardLike = {
-  id: string;
-  name: string;
-  image_url: string | null;
-  fac: string;
-  lv: number;
-  atk: number;
-  defense: number;
-};
+import './CardView.css';
 
 const FAC_COLOR: Record<string, string> = {
   Draconis: '#e0552b',
@@ -27,7 +18,23 @@ const FAC_COLOR: Record<string, string> = {
   Wildlands: '#27ae60',
 };
 
-export function CardView({ card, faceDown, onClick }: { card: CardLike; faceDown?: boolean; onClick?: () => void }) {
+export type CardLike = {
+  id: string;
+  name: string;
+  image_url: string | null;
+  fac: string;
+  lv: number;
+  atk: number;
+  defense: number;
+  cost?: number;
+};
+
+export function CardView({ card, faceDown, onClick, showLv = true }: {
+  card: CardLike;
+  faceDown?: boolean;
+  onClick?: () => void;
+  showLv?: boolean;
+}) {
   if (faceDown) {
     // .card-back (prototype baris 331): ukuran var(--cw)/var(--ch), gradien diagonal.
     return (
@@ -50,22 +57,25 @@ export function CardView({ card, faceDown, onClick }: { card: CardLike; faceDown
     position: 'relative',
     cursor: onClick ? 'pointer' : 'grab',
     flexShrink: 0,
-    color: '#eee',
-    textAlign: 'center',
   };
-  const imgH = 'calc(var(--ch) - 32px)';
   return (
     <div onClick={onClick} className="nc-card" style={rootStyle}>
-      {img ? (
-        <img src={img} alt={card.name} style={{ width: '100%', height: imgH, objectFit: 'contain', display: 'block' }} />
-      ) : (
-        <div style={{ width: '100%', height: imgH, background: '#222', color: '#666', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>
-          no img
-        </div>
-      )}
-      <div style={{ fontSize: 11, padding: '1px 2px', lineHeight: 1.1 }}>{card.name}</div>
-      <div style={{ fontSize: 10, color: '#bbb' }}>{card.fac} · LV{card.lv}</div>
-      <div style={{ fontSize: 10, paddingBottom: 2 }}>ATK {card.atk} / DEF {card.defense}</div>
+      <div className="c-top">
+        {card.cost != null && card.cost > 0 ? <div className="c-cost">{card.cost}</div> : <div />}
+        {showLv && <div className="c-lv">Lv {card.lv}</div>}
+      </div>
+      <div className="c-art">
+        {img ? (
+          <img src={img} alt={card.name} />
+        ) : (
+          <span style={{ opacity: 0.4, fontSize: 10 }}>no img</span>
+        )}
+      </div>
+      <div className="c-name">{card.name}</div>
+      <div className="c-bot">
+        <div className="c-atk">ATK {card.atk}</div>
+        <div className="c-def">DEF {card.defense}</div>
+      </div>
     </div>
   );
 }
