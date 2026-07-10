@@ -149,6 +149,12 @@ const BOARD_CSS = `
 .nc-board .deck-list-container { margin-top:16px; padding:12px 14px; border:1px solid var(--line); border-radius:14px; min-width:0; }
 .nc-board .deck-list-title { font-family:var(--font-display); font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:6px; }
 .nc-board #deck-list-body { display:flex; flex-wrap:wrap; gap:4px; --cw:46px; --ch:64px; }
+.nc-board #deck-list-body .c-top { padding: 3px; }
+.nc-board #deck-list-body .c-cost { width: 15px; height: 15px; font-size: 8px; border-width: 1px; }
+.nc-board #deck-list-body .c-lv { padding: 1px 3px; font-size: 7px; border-radius: 3px; }
+.nc-board #deck-list-body .c-name { font-size: 6px; padding: 10px 4px 2px; bottom: 12px; letter-spacing: 0; }
+.nc-board #deck-list-body .c-bot { height: 12px; font-size: 7.5px; }
+.nc-board #deck-list-body .c-row-tag, .nc-board #deck-list-body .c-fusion-badge { display: none; }
 `;
 
 // Lingkaran badge LP + Energy (player & enemy). Energy di KEDUA sisi (deviasi disengaja).

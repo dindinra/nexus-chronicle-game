@@ -73,8 +73,8 @@ export function CardView({ card, faceDown, onClick, showLv = true }: {
       </div>
       <div className="c-name">{card.name}</div>
       <div className="c-bot">
-        <div className="c-atk">ATK {card.atk}</div>
-        <div className="c-def">DEF {card.defense}</div>
+        <div className="c-atk">{card.atk}</div>
+        <div className="c-def">{card.defense}</div>
       </div>
     </div>
   );
