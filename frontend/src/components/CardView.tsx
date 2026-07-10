@@ -7,6 +7,7 @@
 // faceDown -> render .card-back (prototype baris 331).
 
 import type { CSSProperties } from 'react';
+import { useState, useEffect } from 'react';
 import { assetUrl } from '../api/client';
 import './CardView.css';
 
@@ -18,11 +19,22 @@ const FAC_COLOR: Record<string, string> = {
   Wildlands: '#27ae60',
 };
 
+// FAC emoji — verbatim dari prototype index.html:867-872 (FAC map).
+const FAC_EMOJI: Record<string, string> = {
+  Draconis: '🐉',
+  Machina: '⚙️',
+  Abyss: '💀',
+  Celestia: '✨',
+  Wildlands: '🌿',
+};
+
 export type CardLike = {
   id: string;
   name: string;
   image_url: string | null;
   fac: string;
+  ctype: string;
+  rarity?: string;
   lv: number;
   atk: number;
   defense: number;
@@ -47,6 +59,15 @@ export function CardView({ card, faceDown, onClick, showLv = true }: {
   }
   const img = assetUrl(card.image_url);
   const color = FAC_COLOR[card.fac] ?? '#888';
+  // typeIcon fallback — verbatim dari prototype cardHTML() index.html:1454.
+  const typeIcon = card.ctype === 'trap' ? '🪤'
+    : card.ctype === 'attack' ? '⚔️'
+    : card.ctype === 'tactic' ? '📋'
+    : (card.rarity === 'F' ? '🌀' : (FAC_EMOJI[card.fac] ?? '?'));
+  // img gagal load / tidak ada -> tampilkan ikon tipe (setara onerror prototype).
+  const [imgFailed, setImgFailed] = useState(false);
+  useEffect(() => { setImgFailed(false); }, [img]);
+  const showImg = !!img && !imgFailed;
   const rootStyle: CSSProperties = {
     width: 'var(--cw)',
     height: 'var(--ch)',
@@ -65,10 +86,10 @@ export function CardView({ card, faceDown, onClick, showLv = true }: {
         {showLv && <div className="c-lv">Lv {card.lv}</div>}
       </div>
       <div className="c-art">
-        {img ? (
-          <img src={img} alt={card.name} />
+        {showImg ? (
+          <img src={img} alt={card.name} onError={() => setImgFailed(true)} />
         ) : (
-          <span style={{ opacity: 0.4, fontSize: 10 }}>no img</span>
+          <span style={{ opacity: 0.4 }}>{typeIcon}</span>
         )}
       </div>
       <div className="c-name">{card.name}</div>
