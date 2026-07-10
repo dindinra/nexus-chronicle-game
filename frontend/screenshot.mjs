@@ -18,16 +18,18 @@ async function cardSizes(page, sel) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
   page.on('console', m => { if (m.type() === 'error') log('PAGE-ERR:', m.text()); });
 
-  // --- Auth: register + login (diperlukan untuk /deck-builder) ---
+  // --- Auth: inject JWT via backend API (UI-login flaky → 401 sebelumnya) ---
+  const API = 'http://127.0.0.1:8000';
+  const creds = { username: 'shot_bot', password: 'shot1234' };
   await page.goto(BASE + '/login', { waitUntil: 'networkidle' });
-  const regToggle = page.getByText('Need an account? Register');
-  if (await regToggle.count()) await regToggle.click();
-  await page.locator('input').nth(0).fill('shot_bot');
-  await page.locator('input[type=password]').fill('shot1234');
-  await page.getByRole('button', { name: 'Register' }).click();
-  await page.waitForTimeout(900);
-  await page.getByRole('button', { name: 'Login' }).click();
-  await page.waitForTimeout(1400);
+  let loginRes = await page.request.post(API + '/auth/login', { data: creds });
+  if (!loginRes.ok) {
+    await page.request.post(API + '/auth/register', { data: creds });
+    loginRes = await page.request.post(API + '/auth/login', { data: creds });
+  }
+  const tok = await loginRes.json();
+  await page.evaluate((t) => localStorage.setItem('nexus_token', t), tok.access_token);
+  await page.reload({ waitUntil: 'networkidle' });
   log('auth selesai, url=', page.url());
 
   // --- Arena (/game) ---
