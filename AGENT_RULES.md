@@ -95,3 +95,51 @@ di-override per konteks: .deck-body 112px/156px, #deck-list-body 46px/64px, + me
 viewport). CardView tetap 1 komponen yang pakai var(--cw)/var(--ch); TIAP container
 (arena, deck builder, deck list, hand) yang menentukan ukuran lewat override CSS variable
 di parent — BUKAN prop/varian baru di komponen. (Ini akar penyimpangan visual 6.7a-r2.)
+
+## 11. Prosedur Verifikasi Visual — salinan skill `nexus-visual-verify` (backup Git-tracked)
+
+> CATATAN: Prosedur ini DISALIN dari skill `nexus-visual-verify`
+> (~/AppData/Local/hermes/skills/nexus-visual-verify/SKILL.md) yang terikat ke
+> mesin/profil ini dan TIDAK di-track Git. Salinan ini ADA di repo supaya kalau
+> proyek dipindah mesin/platform, prosedurnya tetap tersimpan. SELALU ikuti
+> prosedur ini untuk TIAP perubahan visual/CSS di `frontend/`.
+
+Langkah (JANGAN dilewati):
+1. **Cari source of truth.** Prototype = `frontend/_legacy-reference/index.html`
+   (3181 baris). Sebelum ganti CSS apa pun, GREP prototype untuk selector/CSS
+   terkait & baca implementasi aslinya.
+   `grep -nE "selector|\.class" frontend/_legacy-reference/index.html`
+2. **Copy CSS VERBATIM.** Nilai (warna, ukuran, posisi, grid, transform, border,
+   shadow) HARUS identik dengan prototype. Ubah HANYA selector/className ke
+   struktur React — JANGAN ubah nilai CSS. Kalau nilai terlihat "aneh", JANGAN
+   diam-diam diubah — LAPORKAN & biarkan user yg putuskan (binding rule Nexus).
+3. **Aturan ukuran kartu (kritis):** dimensi kartu SELALU via `var(--cw)` /
+   `var(--ch)` yang di-override per container parent — JANGAN hardcode
+   width/height di `CardView`. Container: arena 118/165, deck-builder 112/156,
+   deck-list 46/64, + media query. Hardcode = akar regresi visual 6.7a-r2.
+4. **Verifikasi computed style.** Setelah edit, jalankan dev server, lalu pakai
+   `browser_console` (atau Playwright `page.$$eval`) baca `getComputedStyle(el)`
+   elemen kunci & bandingkan dengan nilai prototype. DOM ada ≠ visual benar.
+5. **Screenshot untuk review MANUSIA.** Agent TIDAK punya vision gambar — PNG
+   adalah bukti UNTUK USER, bukan analisis sendiri:
+   `cd frontend && node screenshot.mjs`
+   Output ke `C:/Users/Dindin/nexus-chronicle-game/screenshots/`.
+   Pastikan 3 file (arena.png, deck-builder.png, deck-list.png) regenerate.
+6. **STOP & lapor.** Tampilkan diff/perubahan + bukti computed style + path
+   screenshot. TUNGGU konfirmasi visual user SEBELUM mulai item berikutnya.
+   JANGAN gabung banyak item visual dalam satu laporan.
+
+Pitfalls:
+- Jangan asumsi "DOM render = visual benar" → verifikasi computed style.
+- Jangan reinvent CSS dari ingatan → selalu grep + copy verbatim.
+- Jangan hardcode px kartu (akar regresi 6.7a-r2).
+- Agent TIDAK bisa lihat screenshot → bukti untuk human review saja.
+- Jangan push di tengah fix → ikuti §9 (push per fase penuh, bukan sub-step).
+
+Checklist verifikasi per item:
+- [ ] Grepped prototype untuk CSS asli
+- [ ] Nilai copy verbatim (cuma selector yg berubah)
+- [ ] Ukuran kartu via var(--cw)/var(--ch), tidak hardcode
+- [ ] Computed style cocok dengan prototype (bukti browser_console)
+- [ ] Screenshot regenerate ke /screenshots/
+- [ ] Dilapor + STOP untuk review manusia
