@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getCards, getFusions } from '../api/cards';
 import {
   listDecks,
@@ -10,6 +10,7 @@ import {
 import type { Card, Fusion } from '../types/cards';
 import type { Deck } from '../types/deck';
 import { CardView } from '../components/CardView';
+import './DeckBuilder.css';
 
 interface Selection {
   qty: number;
@@ -223,175 +224,179 @@ export default function DeckBuilder() {
     return true;
   });
 
-  const col: CSSProperties = { flex: 1, minWidth: 260, padding: 12 };
-  const wrap: CSSProperties = {
-    display: 'flex',
-    gap: 12,
-    alignItems: 'flex-start',
-    flexWrap: 'wrap',
-  };
-  const btn: CSSProperties = {
-    cursor: 'pointer',
-    padding: '4px 8px',
-    margin: 2,
-    borderRadius: 4,
-    border: '1px solid #555',
-    background: '#222',
-    color: '#eee',
-  };
-
   return (
-    <section style={{ padding: 24 }}>
-      <h1>Deck Builder</h1>
-      {message && (
-        <p style={{ color: '#6f6', background: '#143', padding: 8, borderRadius: 4 }}>{message}</p>
-      )}
-      {error && (
-        <p style={{ color: '#f66', background: '#311', padding: 8, borderRadius: 4 }}>{error}</p>
-      )}
-
-      <div style={wrap}>
-        {/* Kolom 1: Daftar deck milik user */}
-        <div style={col}>
-          <h3>Daftar Deck</h3>
-          <button style={btn} data-testid="new-deck" onClick={resetEditor}>
+    <section className="deck-wrap">
+      <div className="deck-header">
+        <div className="deck-title">🃏 Deck Builder</div>
+        <div className={`deck-count ${isValid ? 'ok' : 'bad'}`}>
+          {mainCount}/{MAIN_TARGET} · Fusion {fusionCount}/{FUSION_MAX}
+        </div>
+        <div className="deck-actions">
+          <button className="deck-btn" data-testid="new-deck" onClick={resetEditor}>
             + Deck Baru
           </button>
-          {decks.length === 0 && <p>Belum ada deck.</p>}
-          {decks.map((d) => (
-            <div
-              key={d.id}
-              style={{
-                border: '1px solid #333',
-                borderRadius: 6,
-                padding: 8,
-                margin: '8px 0',
-              }}
-            >
-              <strong>{d.name}</strong>
-              {d.is_active && (
-                <span style={{ color: '#6f6', marginLeft: 6 }}>● aktif</span>
-              )}
-              <div style={{ marginTop: 6 }}>
-                <button style={btn} data-testid={`load-${d.id}`} onClick={() => loadDeck(d)}>
-                  Edit
-                </button>
-                <button style={btn} data-testid={`activate-${d.id}`} onClick={() => activate(d.id)}>
-                  Aktifkan
-                </button>
-                <button style={btn} data-testid={`delete-${d.id}`} onClick={() => del(d.id)}>
-                  Hapus
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Kolom 2: Editor deck */}
-        <div style={col}>
-          <h3>Editor Deck</h3>
-          <input
-            data-testid="deck-name"
-            placeholder="Nama deck"
-            value={deckName}
-            onChange={(e) => setDeckName(e.target.value)}
-            style={{ width: '100%', padding: 6, marginBottom: 8, background: '#111', color: '#eee', border: '1px solid #555', borderRadius: 4 }}
-          />
-          <p style={{ fontWeight: 'bold', color: isValid ? '#6f6' : '#fc6' }}>
-            Main: {mainCount}/{MAIN_TARGET} &nbsp;|&nbsp; Fusion: {fusionCount}/{FUSION_MAX}{' '}
-            {isValid ? '✓ valid' : '✗ belum valid'}
-          </p>
-          <button style={btn} data-testid="save" onClick={save} disabled={busy}>
+          <button className="deck-btn deck-save" onClick={save} disabled={busy}>
             {editingId != null ? 'Simpan Perubahan' : 'Buat Deck'}
           </button>
           {editingId != null && (
-            <button style={btn} onClick={resetEditor}>
+            <button className="deck-btn" onClick={resetEditor}>
               Batal
             </button>
           )}
-
-          <h4>Main Deck ({mainCount})</h4>
-          {Object.entries(selections)
-            .filter(([, s]) => !s.is_fusion)
-            .map(([id, s]) => (
-              <div key={id} style={{ display: 'flex', justifyContent: 'space-between', padding: 2 }}>
-                <span>{id}</span>
-                <span>
-                  <button style={btn} onClick={() => removeCard(id)}>
-                    -
-                  </button>
-                  {s.qty}
-                  <button style={btn} onClick={() => addCard(id, false)} disabled={s.qty >= 2}>
-                    +
-                  </button>
-                </span>
-              </div>
-            ))}
-          {mainCount === 0 && <p style={{ color: '#888' }}>Kosong</p>}
-
-          <h4>Fusion ({fusionCount})</h4>
-          {Object.entries(selections)
-            .filter(([, s]) => s.is_fusion)
-            .map(([id, s]) => (
-              <div key={id} style={{ display: 'flex', justifyContent: 'space-between', padding: 2 }}>
-                <span>{id}</span>
-                <span>
-                  <button style={btn} onClick={() => removeCard(id)}>
-                    -
-                  </button>
-                  {s.qty}
-                  <button style={btn} onClick={() => addCard(id, true)} disabled>
-                    +
-                  </button>
-                </span>
-              </div>
-            ))}
-          {fusionCount === 0 && <p style={{ color: '#888' }}>Kosong</p>}
         </div>
+      </div>
 
-        {/* Kolom 3: Katalog kartu */}
-        <div style={col}>
-          <h3>Katalog Kartu</h3>
-          <div style={{ marginBottom: 8 }}>
-            <input
-              placeholder="Cari nama..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ padding: 6, width: 140, background: '#111', color: '#eee', border: '1px solid #555', borderRadius: 4 }}
-            />{' '}
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value as 'all' | 'main' | 'fusion')}
-              style={{ padding: 6, background: '#111', color: '#eee', border: '1px solid #555', borderRadius: 4 }}
-            >
-              <option value="all">Semua</option>
-              <option value="main">Main</option>
-              <option value="fusion">Fusion</option>
-            </select>
-          </div>
+      <div className="deck-body">
+        {message && (
+          <p style={{ color: '#6f6', background: '#143', padding: 8, borderRadius: 4 }}>{message}</p>
+        )}
+        {error && (
+          <p style={{ color: '#f66', background: '#311', padding: 8, borderRadius: 4 }}>{error}</p>
+        )}
 
-              <div className="deck-body">
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-                  {visible.map((it) => {
-                    const sel = selections[it.id];
-                    return (
-                      <div key={it.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                        <CardView card={it} />
-                        <button
-                          style={btn}
-                          data-add={it.id}
-                          data-fusion={it.is_fusion ? '1' : '0'}
-                          onClick={() => addCard(it.id, it.is_fusion)}
-                        >
-                          + Tambah{sel ? ` (${sel.qty})` : ''}
-                        </button>
-                      </div>
-                    );
-                  })}
+        <div className="deck-cols">
+          {/* Kolom 1: Daftar deck milik user */}
+          <div className="deck-col">
+            <div className="deck-section-title">Daftar Deck</div>
+            {decks.length === 0 && <p className="deck-empty">Belum ada deck.</p>}
+            {decks.map((d) => (
+              <div key={d.id} className="deck-row">
+                <div className="drk-info">
+                  <div className="drk-name">
+                    {d.name}
+                    {d.is_active && <span className="drk-active">● aktif</span>}
+                  </div>
+                </div>
+                <div className="deck-actions">
+                  <button className="deck-btn" data-testid={`load-${d.id}`} onClick={() => loadDeck(d)}>
+                    Edit
+                  </button>
+                  <button className="deck-btn" data-testid={`activate-${d.id}`} onClick={() => activate(d.id)}>
+                    Aktifkan
+                  </button>
+                  <button className="deck-btn" data-testid={`delete-${d.id}`} onClick={() => del(d.id)}>
+                    Hapus
+                  </button>
                 </div>
               </div>
+            ))}
+          </div>
+
+          {/* Kolom 2: Editor deck */}
+          <div className="deck-col">
+            <div className="deck-section-title">Editor Deck</div>
+            <input
+              data-testid="deck-name"
+              className="deck-input"
+              placeholder="Nama deck"
+              value={deckName}
+              onChange={(e) => setDeckName(e.target.value)}
+              style={{ marginBottom: 8, width: '100%' }}
+            />
+            <p style={{ fontWeight: 'bold', color: isValid ? '#6f6' : '#fc6' }}>
+              Main: {mainCount}/{MAIN_TARGET} &nbsp;|&nbsp; Fusion: {fusionCount}/{FUSION_MAX}{' '}
+              {isValid ? '✓ valid' : '✗ belum valid'}
+            </p>
+            <div className="deck-actions" style={{ marginBottom: 8 }}>
+              <button className="deck-btn deck-save" data-testid="save" onClick={save} disabled={busy}>
+                {editingId != null ? 'Simpan Perubahan' : 'Buat Deck'}
+              </button>
+              {editingId != null && (
+                <button className="deck-btn" onClick={resetEditor}>
+                  Batal
+                </button>
+              )}
+            </div>
+
+            <div className="deck-section-title">Main Deck ({mainCount})</div>
+            {Object.entries(selections)
+              .filter(([, s]) => !s.is_fusion)
+              .map(([id, s]) => (
+                <div key={id} className="deck-row">
+                  <div className="drk-info">
+                    <div className="drk-name">{id}</div>
+                  </div>
+                  <div className="deck-stepper">
+                    <button onClick={() => removeCard(id)} disabled={s.qty <= 1}>
+                      −
+                    </button>
+                    <span className="drk-n">{s.qty}</span>
+                    <button onClick={() => addCard(id, false)} disabled={s.qty >= 2}>
+                      +
+                    </button>
+                  </div>
+                </div>
+              ))}
+            {mainCount === 0 && <p className="deck-empty">Kosong</p>}
+
+            <div className="deck-section-title">Fusion ({fusionCount})</div>
+            {Object.entries(selections)
+              .filter(([, s]) => s.is_fusion)
+              .map(([id, s]) => (
+                <div key={id} className="deck-row">
+                  <div className="drk-info">
+                    <div className="drk-name">{id}</div>
+                  </div>
+                  <div className="deck-stepper">
+                    <button onClick={() => removeCard(id)} disabled={s.qty <= 1}>
+                      −
+                    </button>
+                    <span className="drk-n">{s.qty}</span>
+                    <button onClick={() => addCard(id, true)} disabled>
+                      +
+                    </button>
+                  </div>
+                </div>
+              ))}
+            {fusionCount === 0 && <p className="deck-empty">Kosong</p>}
+          </div>
+
+          {/* Kolom 3: Katalog kartu */}
+          <div className="deck-col">
+            <div className="deck-section-title">Katalog Kartu</div>
+            <div className="deck-actions deck-toolbar">
+              <input
+                className="deck-input"
+                style={{ flex: 1 }}
+                placeholder="Cari nama..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <select
+                className="deck-input"
+                style={{ width: 'auto' }}
+                value={filter}
+                onChange={(e) => setFilter(e.target.value as 'all' | 'main' | 'fusion')}
+              >
+                <option value="all">Semua</option>
+                <option value="main">Main</option>
+                <option value="fusion">Fusion</option>
+              </select>
+            </div>
+
+            <div className="deck-grid">
+              {visible.map((it) => {
+                const sel = selections[it.id];
+                return (
+                  <div key={it.id} className="deck-card-tile">
+                    <div className="deck-card-visual">
+                      <CardView card={it} />
+                    </div>
+                    <button
+                      className="deck-btn"
+                      data-add={it.id}
+                      data-fusion={it.is_fusion ? '1' : '0'}
+                      onClick={() => addCard(it.id, it.is_fusion)}
+                    >
+                      + Tambah{sel ? ` (${sel.qty})` : ''}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
     </section>
   );
 }
