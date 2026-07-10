@@ -89,7 +89,7 @@ export function CardView({ card, faceDown, onClick, showLv = true }: {
         {showImg ? (
           <img src={img} alt={card.name} onError={() => setImgFailed(true)} />
         ) : (
-          <span style={{ opacity: 0.4 }}>{typeIcon}</span>
+          <span style={{ opacity: 0.4, color: 'var(--text-main, #e6e9f0)' }}>{typeIcon}</span>
         )}
       </div>
       <div className="c-name">{card.name}</div>
