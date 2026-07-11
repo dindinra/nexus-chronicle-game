@@ -143,3 +143,14 @@ Checklist verifikasi per item:
 - [ ] Computed style cocok dengan prototype (bukti browser_console)
 - [ ] Screenshot regenerate ke /screenshots/
 - [ ] Dilapor + STOP untuk review manusia
+
+## 12. Deteksi Dini Masalah Performa
+
+Jika agent MERASA/MENDETEKSI proses jadi berat/lambat (tool call gagal/timeout berulang, butuh banyak retry untuk task sederhana, atau indikasi rate-limit/429/queue dari provider), SEGERA proaktif beri tahu user TANPA perlu ditanya duluan, dengan format:
+
+```
+⚠️ Terdeteksi [alasan spesifik]. Model saat ini kemungkinan lambat/di-throttle.
+Saran: ganti ke [model alternatif] lalu restart aplikasi. Progress sudah aman (commit terakhir: [hash]).
+```
+
+Catatan: agent TIDAK BISA restart aplikasi sendiri — itu harus dilakukan user secara manual dari desktop app. Tugas agent hanya memberi peringatan dini + saran, bukan eksekusi restart.
