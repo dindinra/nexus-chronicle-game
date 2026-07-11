@@ -75,6 +75,20 @@
       - `frontend/src/components/CardView.tsx`: +prop `onClick` (kartu jadi klik-able, cursor pointer saat ada handler).
       - `frontend/src/pages/GameBoard.tsx`: state `gs` diangkat ke `useState` (bukan demo statis lagi); handler `playCard(uid)` (hand -> Front dulu, lalu Back) & `returnCard(uid)` (board -> hand). `Row` terima `onCardClick`.
       - Verifikasi browser (`/game`): console **0 error**; klik kartu hand "Lyria" -> pesan `Mainkan Lyria, Silver Vanguard -> Front slot 3` (hand 6->5); klik kartu board -> `Kembalikan Lyria, Silver Vanguard ke hand` (hand 5->6). `npm run build` lolos (34 modules).
+    - [x] **Fix #1 (Fase 6.7a-r2)** — Teks kartu & label ATK/DEF tidak kepotong:
+      - `CardView.tsx`: layout absolute-overlay verbatim prototype (no-wrap, overflow:hidden)
+      - Hapus label "ATK"/"DEF" — angka murni merah/biru (Opsi A, disetujui user)
+      - `GameBoard.tsx` + `DeckBuilder.css`: override `#deck-list-body .c-bot` (7.5px font, 12px height) verbatim
+      - **Committed:** `4c02db5`, `aae49b2`, `3dfd64d`
+    - [x] **Fix #2 (Fase 6.7a-r2)** — Placeholder "no img" -> ikon tipe kartu:
+      - `CardView.tsx`: typeIcon verbatim (trap:🕸️/attack:⚔️/tactic:📋/fusion:🌀/faksi emoji)
+      - Swap trap icon 🪤->🕸️ (glyph 🪤 blank di Chromium headless)
+      - Handle onError React (setara onerror prototype)
+      - **Committed:** `f4798b9`, `86574db`, `ffa4b40`
+    - [x] **Fix #6 (Fase 6.7a-r2)** — Hapus caption basi arena footer:
+      - Hapus `<p>` development notes + "klik kartu board untuk mengembalikan" dari `GameBoard.tsx`
+      - **Committed:** `811803b`
+    - [x] **Catatan #3 (navbar dev)** — `TODO_BEFORE_RELEASE.md` dibuat di root (item navbar wajib dihapus sebelum rilis)
     - [ ] 6.7c Sistem giliran (turn/phase state)
     - [ ] 6.7d Efek kartu (1 kartu/step, cross-check PORTING_CHECKLIST.md) — nf03 & nc13 **TANYA USER dulu**
     - [ ] 6.7e AI lawan
