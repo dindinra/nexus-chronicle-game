@@ -29,3 +29,18 @@ untuk kembalikan.)"
 
 ## 3. Daftar item lain — tambahkan saat ditemukan
 - (kosong — isi sesuai kebutuhan)
+
+## 4. Coin Flip Modal (6.7c-2 — DISKIP sementara)
+**Lokasi rencana:** `frontend/src/pages/GameBoard.tsx` — `startPlayerTurn()` saat ini
+langsung jalan (player selalu duluan) TANPA modal coin flip.
+
+**Alasan diskip (dev-only):** putusan user 2026-07-11 — saat development/testing,
+hasil predictable (player duluan) memudahkan verifikasi engine giliran, bukan random tiap reload.
+
+**Yang harus di-port verbatim SEBELUM rilis final:**
+- `showCoinFlip()` (prototype baris 1236) — modal animasi lempar koin.
+- `afterCoin(pFirst)` (1250) — tentukan first player dari hasil koin.
+- `newGame()` (1226) — urutan: coin flip → `afterCoin` → `startPlayerTurn`/`startEnemyTurn`.
+- Logika di prototype: `firstTurn=true`, lalu siapa menang koin jalan duluan.
+
+**Status:** ⏸️ Belum dikerjakan (sengaja diskip di 6.7c-2). WAJIB sebelum rilis publik.

@@ -12,13 +12,21 @@
 //     (prototype asli cuma di you-badge) -> supaya HUD simetris & energy musuh kelihatan.
 //
 // 6.7b (interaksi) dipertahankan: klik kartu Hand -> mainkan; klik kartu board player -> kembalikan.
-// Engine belum ada (6.7c/6.7d).
+// 6.7c-2: engine giliran player (startPlayerTurn: regen energi +1, auto-draw, banner, auto->main 600ms).
+//   Coin flip DISKIP (putusan user 2026-07-11): player selalu duluan. Lihat TODO_BEFORE_RELEASE.md.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getCards } from '../api/cards';
 import type { Card, Fusion } from '../types/cards';
 import type { BoardCard, BoardRow, FusionInstance, GameState } from '../types/game';
 import { CardView } from '../components/CardView';
+
+// Batas hand (prototype HAND_LIMIT = 6, baris 863). drawOne() skip bila >= limit.
+const HAND_LIMIT = 6;
+
+// 6.7c-2: guard init SEKALI (StrictMode dev jalanin effect 2x -> cegah
+// double getCards / double applyTurnStart / double banner).
+let _gameInited = false;
 
 function inst(card: Card, uid: string): BoardCard {
   return {
@@ -57,32 +65,64 @@ const DEMO_FUSIONS: Fusion[] = [
   { id: 'nf06', name: 'Wildlands Alpha', rarity: 'F', lv: 2, fac: 'Wildlands', atk: 42, defense: 8, ctype: 'unit', eff: 'Destroy 1 enemy Front.', img: '', mats: ['nc06', 'nc07'], fusionType: 'contact', formationHint: '', image_url: null },
 ];
 
+// 6.7c-2: PURE turn-start (port startPlayerTurn 1184–1197, tanpa coin flip).
+// Reset flag + temp, regen energi +1, auto-draw 1, phase 'draw'.
+// PURE -> setGs(applyTurnStart(buildDemoState)) idempoten (StrictMode dev jalanin
+// effect 2x; kedua resolve menghasikan state SAMA, tdk saling clobber).
+// Dipakai: init load (player turn 1) & nanti enemy/main turn (6.7c-5).
+function applyTurnStart(gs: GameState): GameState {
+  const gain = 1; // energyForTurn(ownTurnCount) -> 1 (prototype 876)
+  const canDraw = gs.pDeck.length > 0 && gs.pHand.length < HAND_LIMIT;
+  const drawn = canDraw ? gs.pDeck[0] : null;
+  const resetTemp = (row: BoardRow): BoardRow =>
+    row.map((c) => (c ? { ...c, _tempBoost: 0, _tempDebuff: 0 } : null));
+  const resetAtk = (row: BoardRow): BoardRow =>
+    row.map((c) => (c ? { ...c, _hasAttacked: false } : null));
+  return {
+    ...gs,
+    isPlayer: true,
+    _negate: false,
+    _freeTeleport: false,
+    atk: false,
+    pTurnCount: gs.pTurnCount + 1,
+    pEnergy: gs.pEnergy + gain,
+    pEnergyMax: gs.pEnergyMax + gain,
+    pFront: resetAtk(resetTemp(gs.pFront)),
+    pBack: resetAtk(resetTemp(gs.pBack)),
+    eFront: resetTemp(gs.eFront),
+    eBack: resetTemp(gs.eBack),
+    pHand: canDraw ? [...gs.pHand, { ...drawn! }] : gs.pHand,
+    pDeck: canDraw ? gs.pDeck.slice(1) : gs.pDeck,
+    phase: 'draw',
+  };
+}
+
 // State demo awal untuk verifikasi interaksi (bukan engine nyata).
+// Raw initial (energi 0, hand 4, deck 6, phase 'draw'); turn-start diterapkan
+// lewat applyTurnStart() di load effect.
 function buildDemoState(cards: Card[]): GameState {
   const byId = (id: string) => cards.find((c) => c.id === id)!;
   const deckCard = (id: string, uid: string) => inst(byId(id), uid);
   return {
     turn: 1,
     isPlayer: true,
-    phase: 'main',
+    phase: 'draw',
     firstTurn: true,
     playerHasMoved: false,
     pLP: 80,
     eLP: 80,
-    pEnergy: 5,
-    pEnergyMax: 10,
-    pTurnCount: 1,
-    eEnergy: 5,
-    eEnergyMax: 10,
-    eTurnCount: 1,
+    pEnergy: 0,
+    pEnergyMax: 0,
+    pTurnCount: 0,
+    eEnergy: 0,
+    eEnergyMax: 0,
+    eTurnCount: 0,
     pDeck: [deckCard('nc04', 'pd1'), deckCard('nc06', 'pd2'), deckCard('nc07', 'pd3'), deckCard('nc09', 'pd4'), deckCard('nc11', 'pd5'), deckCard('nc13', 'pd6')],
     pHand: [
       inst(byId('nc01'), 'h1'),
       inst(byId('nc05'), 'h2'),
       inst(byId('at01'), 'h3'),
       inst(byId('tc02'), 'h4'),
-      inst(byId('tr01'), 'h5'),
-      inst(byId('nc10'), 'h6'),
     ],
     pFront: [inst(byId('nc02'), 'pf1'), inst(byId('nc08'), 'pf2'), null],
     pBack: [inst(byId('nc03'), 'pb1'), null, inst(byId('nc12'), 'pb3')],
@@ -185,6 +225,18 @@ const BOARD_CSS = `
   transition: color .25s, text-shadow .25s;
 }
 .nc-board .ph.active { color: var(--accent); text-shadow: 0 0 10px rgba(124,155,255,.75), 0 2px 4px rgba(0,0,0,.9); }
+
+/* Turn banner (prototype baris 217-226) — flashes "Turn N / Your Turn" centered. */
+.nc-board .turn-banner {
+  position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+  background: rgba(6,7,11,0); pointer-events: none;
+  font-family: var(--font-display); font-weight: 800; font-size: 32px; letter-spacing: 3px;
+  color: var(--text-main, #ddd8cc); text-transform: uppercase; opacity: 0;
+  transition: opacity .35s ease, background .35s ease;
+}
+.nc-board .turn-banner.show { opacity: 1; background: rgba(6,7,11,.4); }
+.nc-board .turn-banner .tb-who { display: block; font-size: 13px; letter-spacing: 4px; color: var(--gold); margin-top: 8px; }
 `;
 
 // Lingkaran badge LP + Energy (player & enemy). Energy di KEDUA sisi (deviasi disengaja).
@@ -329,8 +381,16 @@ export default function GameBoard() {
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [modal, setModal] = useState<{ title: string; body: string } | null>(null);
+  // 6.7c-2: banner giliran + ref mirror gs (dibaca flashTurnBanner).
+  const [banner, setBanner] = useState<{ turn: number; who: string } | null>(null);
+  const gsRef = useRef<GameState | null>(null);
+  const startedRef = useRef(false);
 
+  // Load kartu + set RAW demo (turn-start diterapkan oleh startPlayerTurn via
+  // effect [gs] di bawah — satu kali, sesuai prototype startPlayerTurn 1184).
   useEffect(() => {
+    if (_gameInited) return;   // StrictMode 2nd invoke -> skip
+    _gameInited = true;
     getCards()
       .then((cs) => {
         setCards(cs);
@@ -338,6 +398,9 @@ export default function GameBoard() {
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
   }, []);
+
+  // Sync gsRef tiap gs berubah (dibaca flashTurnBanner).
+  useEffect(() => { gsRef.current = gs; }, [gs]);
 
   const playCard = (uid: string) => {
     const prev = gs;
@@ -397,6 +460,35 @@ export default function GameBoard() {
     if (gs && gs.isPlayer && (gs.phase === 'main' || gs.phase === 'battle')) setPhase('end');
   };
 
+  // ── 6.7c-2: flashTurnBanner() — port 1167–1173 (banner "Turn N" 1400ms) ──
+  const flashTurnBanner = (turn: number, isPlayer: boolean) => {
+    setBanner({ turn, who: isPlayer ? 'Your Turn' : "Enemy's Turn" });
+    setTimeout(() => setBanner(null), 1400);
+  };
+
+  // ── 6.7c-2: startPlayerTurn() — port 1184–1205 (TANPA coin flip) ──
+  // Energi +1/turn (energyForTurn selalu 1, prototype 876), reset flag + temp,
+  // auto-draw 1 (bila hand<6 & deck>0), phase 'draw' -> auto 'main' 600ms.
+  // State mutasi via PURE applyTurnStart() (lihat atas); gsRef sdh sync
+  // di effect sblm-nya sehingga turn/isPlayer akurat.
+  const startPlayerTurn = () => {
+    const cur = gsRef.current;
+    const turn = cur ? cur.turn : 1;
+    const isPlayer = cur ? cur.isPlayer : true;
+    flashTurnBanner(turn, isPlayer);
+    setGs((prev) => (prev ? applyTurnStart(prev) : prev));
+    // Auto -> MAIN setelah 600ms (prototype 1200).
+    setTimeout(() => setPhase('main'), 600);
+  };
+
+  // 6.7c-2: mulai giliran player langsung di mount (coin flip diskip -> player duluan).
+  useEffect(() => {
+    if (gs && !startedRef.current) {
+      startedRef.current = true;
+      startPlayerTurn();
+    }
+  }, [gs]);
+
   if (error) {
     return (
       <section className="nc-board" style={{ padding: 24 }}>
@@ -421,6 +513,17 @@ export default function GameBoard() {
   return (
     <section className="nc-board" style={{ padding: 24, minHeight: '100vh', background: '#0f0f0f' }}>
       <style>{BOARD_CSS}</style>
+
+      {/* Turn banner (DRW/overlay) — port verbatim prototype 217–226 + #turn-pill 795.
+          Flash "Turn N / Your Turn" 1400ms saat giliran berganti. */}
+      <div className={`turn-banner ${banner ? 'show' : ''}`}>
+        {banner && (
+          <>
+            Turn {banner.turn}
+            <span className="tb-who">{banner.who}</span>
+          </>
+        )}
+      </div>
 
       {/* Phase strip (DRW/MAIN/BTL/END) — port verbatim prototype 789–792 + .ph CSS 196–202.
           .active + disabled tombol diturunkan dari gs (setara setPhase prototype 1155–1162). */}
