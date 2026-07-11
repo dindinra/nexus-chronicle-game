@@ -109,10 +109,12 @@ function buildDemoState(cards: Card[]): GameState {
 // ── CSS (port persis dari prototype, di-scope di bawah .nc-board) ──
 const BOARD_CSS = `
 .nc-board {
+  position: relative;
   --cw: 118px; --ch: 165px; --hand-zone-h: 192px;
   --arena-gap: 14px; --radius: 14px;
   --text-muted: #878c9c; --gold: #f0b429; --red: #ff5470;
   --green: #34d399; --purple: #a78bfa;
+  --accent: #7c9bff; --line: rgba(255,255,255,0.08);
   --font-display: 'Rajdhani', sans-serif;
   --panel-bg-solid: #10121a; --panel-border: rgba(255,255,255,0.09);
 }
@@ -155,6 +157,34 @@ const BOARD_CSS = `
 .nc-board #deck-list-body .c-name { font-size: 6px; padding: 10px 4px 2px; bottom: 12px; letter-spacing: 0; }
 .nc-board #deck-list-body .c-bot { height: 12px; font-size: 7.5px; }
 .nc-board #deck-list-body .c-row-tag, .nc-board #deck-list-body .c-fusion-badge { display: none; }
+
+.nc-board .turn-btns { flex-shrink: 0; display: flex; gap: 12px; }
+.nc-board .cbtn-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.nc-board .cbtn-label { font-size: 8.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; }
+.nc-board .circle-btn {
+  width: 58px; height: 58px; border-radius: 50%; flex-shrink: 0;
+  background: var(--panel-bg-solid); border: 2px solid var(--line); color: var(--text-muted);
+  font-size: 21px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: .18s; box-shadow: 0 8px 18px rgba(0,0,0,.4);
+}
+.nc-board .circle-btn:disabled { opacity: .3; cursor: not-allowed; }
+.nc-board .circle-btn.cb-battle:not(:disabled) { border-color: var(--red); color: var(--red); }
+.nc-board .circle-btn.cb-battle:not(:disabled):hover { background: var(--red); color: #fff; transform: translateY(-2px); }
+.nc-board .circle-btn.cb-end:not(:disabled) { border-color: var(--green); color: var(--green); }
+.nc-board .circle-btn.cb-end:not(:disabled):hover { background: var(--green); color: #06251a; transform: translateY(-2px); }
+
+/* Phase pips — floating on the field, centered between both front rows (plain text, no box) */
+.nc-board .phase-strip-field {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  display: flex; gap: 16px; z-index: 22; pointer-events: none;
+}
+.nc-board .ph {
+  font-family: var(--font-display); font-size: 11px; font-weight: 700;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;
+  text-shadow: 0 2px 4px rgba(0,0,0,.9), 0 0 10px rgba(0,0,0,.7);
+  transition: color .25s, text-shadow .25s;
+}
+.nc-board .ph.active { color: var(--accent); text-shadow: 0 0 10px rgba(124,155,255,.75), 0 2px 4px rgba(0,0,0,.9); }
 `;
 
 // Lingkaran badge LP + Energy (player & enemy). Energy di KEDUA sisi (deviasi disengaja).
@@ -353,6 +383,20 @@ export default function GameBoard() {
     setGs({ ...prev, [key]: newRow, pHand: [...prev.pHand, card] });
   };
 
+  // ── 6.7c-1: Phase strip + setPhase() — port verbatim dari prototype 1153–1162 ──
+  // setPhase update phase; .active + disabled tombol diturunkan (derived) dari gs di render.
+  const setPhase = (ph: GameState['phase']) => {
+    setGs((prev) => (prev ? { ...prev, phase: ph } : prev));
+  };
+  // Tombol battle/end — wiring minimal agar strip bisa diverifikasi interaktif.
+  // Logika penuh enterBattle/doEnd (firstTurn check, finishEndPhase, enemy turn) = 6.7c-3.
+  const enterBattle = () => {
+    if (gs && gs.isPlayer && gs.phase === 'main' && !gs.firstTurn) setPhase('battle');
+  };
+  const doEnd = () => {
+    if (gs && gs.isPlayer && (gs.phase === 'main' || gs.phase === 'battle')) setPhase('end');
+  };
+
   if (error) {
     return (
       <section className="nc-board" style={{ padding: 24 }}>
@@ -370,15 +414,29 @@ export default function GameBoard() {
     );
   }
 
+  // Disabled tombol — diturunkan dari gs (setara baris 1159–1160 prototype setPhase).
+  const battleDisabled = !(gs.isPlayer && gs.phase === 'main' && !gs.firstTurn);
+  const endDisabled = !(gs.isPlayer && (gs.phase === 'main' || gs.phase === 'battle'));
+
   return (
     <section className="nc-board" style={{ padding: 24, minHeight: '100vh', background: '#0f0f0f' }}>
       <style>{BOARD_CSS}</style>
+
+      {/* Phase strip (DRW/MAIN/BTL/END) — port verbatim prototype 789–792 + .ph CSS 196–202.
+          .active + disabled tombol diturunkan dari gs (setara setPhase prototype 1155–1162). */}
+      <div className="phase-strip-field">
+        <div className={`ph ${gs.phase === 'draw' ? 'active' : ''}`}>DRW</div>
+        <div className={`ph ${gs.phase === 'main' ? 'active' : ''}`}>MAIN</div>
+        <div className={`ph ${gs.phase === 'battle' ? 'active' : ''}`}>BTL</div>
+        <div className={`ph ${gs.phase === 'end' ? 'active' : ''}`}>END</div>
+      </div>
+
       <h1>Game Board</h1>
       {msg && (
         <p style={{ color: '#6f6', background: '#143', padding: 8, borderRadius: 4 }}>{msg}</p>
       )}
       <div style={{ marginBottom: 12, color: '#ccc', fontSize: 13 }}>
-        Turn {gs.turn} · Phase {gs.phase}
+        Turn {gs.turn}
       </div>
 
       {/* Enemy hand row: badge (LP+Energy) + fan card-back */}
@@ -438,6 +496,16 @@ export default function GameBoard() {
         <SideBadge side="you" lp={gs.pLP} energy={gs.pEnergy} energyMax={gs.pEnergyMax} />
         <div className="hand-zone">
           <PlayerHandFan hand={gs.pHand} onPlay={playCard} />
+        </div>
+        <div className="turn-btns">
+          <div className="cbtn-wrap">
+            <button className="circle-btn cb-battle" disabled={battleDisabled} title="Battle Phase" onClick={enterBattle}>⚔</button>
+            <div className="cbtn-label">Battle</div>
+          </div>
+          <div className="cbtn-wrap">
+            <button className="circle-btn cb-end" disabled={endDisabled} title="End Turn" onClick={doEnd}>⏭</button>
+            <div className="cbtn-label">End</div>
+          </div>
         </div>
       </div>
 

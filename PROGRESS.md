@@ -89,7 +89,8 @@
       - Hapus `<p>` development notes + "klik kartu board untuk mengembalikan" dari `GameBoard.tsx`
       - **Committed:** `811803b`
     - [x] **Catatan #3 (navbar dev)** — `TODO_BEFORE_RELEASE.md` dibuat di root (item navbar wajib dihapus sebelum rilis)
-    - [ ] 6.7c Sistem giliran (turn/phase state)
+    - [ ] 6.7c Sistem giliran (turn/phase state) — IN PROGRESS
+      - [x] **6.7c-1** Phase strip UI + tombol battle/end + `setPhase()` React — **SELESAI & terverifikasi (2026-07-11)**. CSS verbatim prototype (`.ph`/`.ph.active`/`.circle-btn`/`.phase-strip-field`, baris 179–202 / 789–792 / 1153–1162); tipe `Phase` diselaraskan `'attack'`→`'battle'` (sesuai prototype). Bukti computed style cocok prototype (`.ph.active`=rgb(124,155,255)/11px/700/uppercase/1px; `.cb-end` border+color rgb(52,211,153); battle disabled opacity .3); screenshot `screenshots/phase-strip.png` + `phase-strip-end.png`. ⚠️ Strip floating `top:50%` (verbatim) melayang di tengah board vertikal React — perlu review visual user. ⚠️ Pre-existing: `npm run build` gagal di `DeckBuilder.tsx:383` (`CatalogItem` missing `ctype`) — BUKAN dari 6.7c-1.
     - [ ] 6.7d Efek kartu (1 kartu/step, cross-check PORTING_CHECKLIST.md) — nf03 & nc13 **TANYA USER dulu**
     - [ ] 6.7e AI lawan
 - [ ] Fase 7..10 — belum

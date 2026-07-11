@@ -16,7 +16,7 @@ import type { Card, Fusion } from './cards';
 export type Row = 'front' | 'back';
 export type Column = 0 | 1 | 2;
 export type Side = 'player' | 'enemy';
-export type Phase = 'draw' | 'main' | 'attack' | 'end' | 'gameover';
+export type Phase = 'draw' | 'main' | 'battle' | 'end' | 'gameover';
 
 // Instance kartu di board/hand/gy.
 // Card + flag runtime per-instance dari mkInst() prototype.
