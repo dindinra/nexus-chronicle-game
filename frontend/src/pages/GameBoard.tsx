@@ -451,9 +451,7 @@ export default function GameBoard() {
         </div>
       </div>
 
-      <p style={{ color: '#666', marginTop: 16, fontSize: 11 }}>
-        (6.7a-r2 — badge LP+Energy kedua sisi; enemy hand fan card-back; pile di-dalam row-group. 6.7b — klik kartu Hand untuk mainkan; klik kartu board untuk kembalikan.)
-      </p>
+      
 
       {modal && <PlaceholderModal title={modal.title} body={modal.body} onClose={() => setModal(null)} />}
     </section>
