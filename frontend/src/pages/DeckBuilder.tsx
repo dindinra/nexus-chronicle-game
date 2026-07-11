@@ -27,6 +27,7 @@ interface CatalogItem {
   is_fusion: boolean;
   sub: string;
   fac: string;
+  ctype: string;
   lv: number;
   atk: number;
   defense: number;
@@ -199,6 +200,7 @@ export default function DeckBuilder() {
       is_fusion: false,
       sub: `${c.cost}⚡ ${c.atk}/${c.defense}`,
       fac: c.fac,
+      ctype: c.ctype,
       lv: c.lv,
       atk: c.atk,
       defense: c.defense,
@@ -210,6 +212,7 @@ export default function DeckBuilder() {
       is_fusion: true,
       sub: 'Fusion',
       fac: f.fac,
+      ctype: 'unit',
       lv: f.lv,
       atk: f.atk,
       defense: f.defense,
