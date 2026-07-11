@@ -60,7 +60,7 @@ export function CardView({ card, faceDown, onClick, showLv = true }: {
   const img = assetUrl(card.image_url);
   const color = FAC_COLOR[card.fac] ?? '#888';
   // typeIcon fallback — verbatim dari prototype cardHTML() index.html:1454.
-  const typeIcon = card.ctype === 'trap' ? '🪤'
+  const typeIcon = card.ctype === 'trap' ? '🕸️'
     : card.ctype === 'attack' ? '⚔️'
     : card.ctype === 'tactic' ? '📋'
     : (card.rarity === 'F' ? '🌀' : (FAC_EMOJI[card.fac] ?? '?'));
