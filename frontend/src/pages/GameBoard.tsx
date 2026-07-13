@@ -213,18 +213,25 @@ const BOARD_CSS = `
 .nc-board .circle-btn.cb-end:not(:disabled) { border-color: var(--green); color: var(--green); }
 .nc-board .circle-btn.cb-end:not(:disabled):hover { background: var(--green); color: #06251a; transform: translateY(-2px); }
 
-/* Phase pips — floating on the field, centered between both front rows (plain text, no box) */
+/* Phase pips — FIXED di tepi atas layar (viewport), area kosong, TIDAK overlap row kartu.
+   top:50% verbatim prototype tabrak row (proporsi board React beda) -> user minta pindah (2026-07-11).
+   + backdrop pill + active filled (kontras jelas, per review user). */
 .nc-board .phase-strip-field {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-  display: flex; gap: 16px; z-index: 22; pointer-events: none;
+  position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 14px; z-index: 60; pointer-events: none;
+  background: rgba(12,14,22,.72); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 999px; padding: 7px 16px; backdrop-filter: blur(6px);
+  box-shadow: 0 6px 20px rgba(0,0,0,.55);
 }
 .nc-board .ph {
-  font-family: var(--font-display); font-size: 11px; font-weight: 700;
-  color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;
-  text-shadow: 0 2px 4px rgba(0,0,0,.9), 0 0 10px rgba(0,0,0,.7);
-  transition: color .25s, text-shadow .25s;
+  font-family: var(--font-display); font-size: 12px; font-weight: 700;
+  color: #aeb4c8; text-transform: uppercase; letter-spacing: 1.5px;
+  transition: color .2s, background .2s; padding: 2px 9px; border-radius: 6px;
 }
-.nc-board .ph.active { color: var(--accent); text-shadow: 0 0 10px rgba(124,155,255,.75), 0 2px 4px rgba(0,0,0,.9); }
+.nc-board .ph.active {
+  color: #0b0e16; background: var(--accent);
+  box-shadow: 0 0 12px rgba(124,155,255,.65);
+}
 
 /* Turn banner (prototype baris 217-226) — flashes "Turn N / Your Turn" centered. */
 .nc-board .turn-banner {
