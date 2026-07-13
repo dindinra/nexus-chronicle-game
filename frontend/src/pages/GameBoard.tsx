@@ -156,6 +156,7 @@ function buildDemoState(cards: Card[]): GameState {
       inst(byId('nc05'), 'h2'),
       inst(byId('at01'), 'h3'),
       inst(byId('tc02'), 'h4'),
+      inst(byId('tr01'), 'h5'),
     ],
     pFront: [inst(byId('nc02'), 'pf1'), inst(byId('nc08'), 'pf2'), null],
     pBack: [inst(byId('nc03'), 'pb1'), null, inst(byId('nc12'), 'pb3')],
@@ -221,6 +222,11 @@ const BOARD_CSS = `
 .nc-board .enemy-hand .hand-card-wrapper { transform-origin:top center; margin-left:calc(var(--cw) * -0.32); }
 .nc-board .card-back { width:var(--cw); height:var(--ch); border-radius:12px; border:1px solid rgba(255,255,255,0.12); background:repeating-linear-gradient(135deg, #12131c, #12131c 9px, #1a1c28 9px, #1a1c28 18px); flex-shrink:0; box-shadow:0 6px 16px rgba(0,0,0,0.45); }
 .nc-board .empty-slot { width:120px; height:112px; border:1px dashed #333; border-radius:6px; }
+/* 6.7c-4: highlight interaksi (seleksi kartu, target summon/trap, target attack, attacker) */
+.nc-board .hand-card-wrapper.sel .nc-card { outline: 2px solid var(--red); box-shadow: 0 0 16px rgba(255,84,112,.55); }
+.nc-board .empty-slot.drop-target { border-color: var(--green); background: rgba(52,211,153,.10); box-shadow: 0 0 14px rgba(52,211,153,.35) inset; cursor: pointer; }
+.nc-board .empty-slot.drop-target.danger { border-color: var(--red); background: rgba(255,84,112,.10); box-shadow: 0 0 14px rgba(255,84,112,.35) inset; }
+.nc-board .slot-attacking .nc-card { outline: 2px solid var(--red); box-shadow: 0 0 16px rgba(255,84,112,.6); }
 .nc-board .deck-list-container { margin-top:16px; padding:12px 14px; border:1px solid var(--line); border-radius:14px; min-width:0; }
 .nc-board .deck-list-title { font-family:var(--font-display); font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:6px; }
 .nc-board #deck-list-body { display:flex; flex-wrap:wrap; gap:4px; --cw:46px; --ch:64px; }
@@ -329,22 +335,32 @@ function FieldPile({ icon, count, label, fusion, onClick }: {
   );
 }
 
-// Row slot field (Front/Back) — kartu face-up, klik (player) -> returnCard.
-function FieldRow({ row, onCardClick }: {
+// Row slot field (Front/Back) — kartu face-up; klik di-handle oleh slotClick (port 6.7c-4).
+function FieldRow({ row, onCardClick, onEmptySlotClick, dropActive, dropDanger, attackerUid }: {
   row: BoardRow;
   onCardClick?: (c: BoardCard, i: number) => void;
+  onEmptySlotClick?: (i: number) => void;
+  dropActive?: boolean;
+  dropDanger?: boolean;
+  attackerUid?: string | null;
 }) {
   return (
     <div className="row-slots">
       {row.map((c, i) =>
         c ? (
-          <CardView
-            key={i}
-            card={c}
-            onClick={onCardClick ? () => onCardClick(c, i) : undefined}
-          />
+          <div key={i} className={attackerUid && c.uid === attackerUid ? 'slot-attacking' : ''}>
+            <CardView
+              card={c}
+              faceDown={c._isTrap}
+              onClick={onCardClick ? () => onCardClick(c, i) : undefined}
+            />
+          </div>
         ) : (
-          <div key={i} className="empty-slot" />
+          <div
+            key={i}
+            className={`empty-slot${dropActive && onEmptySlotClick ? (dropDanger ? ' drop-target danger' : ' drop-target') : ''}`}
+            onClick={onEmptySlotClick ? () => onEmptySlotClick(i) : undefined}
+          />
         ),
       )}
     </div>
@@ -375,10 +391,11 @@ function EnemyHandFan({ hand }: { hand: BoardCard[] }) {
   );
 }
 
-// Player hand = fan kartu klik-able (6.7b: klik -> mainkan).
-function PlayerHandFan({ hand, onPlay }: {
+// Player hand = fan kartu klik-able (6.7b: klik -> mainkan). 6.7c-4: highlight kartu terpilih.
+function PlayerHandFan({ hand, selIdx, onSelect }: {
   hand: BoardCard[];
-  onPlay: (uid: string) => void;
+  selIdx: number | null;
+  onSelect: (i: number) => void;
 }) {
   const total = hand.length;
   return (
@@ -391,10 +408,10 @@ function PlayerHandFan({ hand, onPlay }: {
         return (
           <div
             key={c.uid}
-            className="hand-card-wrapper"
+            className={`hand-card-wrapper${selIdx === i ? ' sel' : ''}`}
             style={{ transform: `rotate(${angle}deg) translateY(${yOff}px)`, zIndex: i }}
           >
-            <CardView card={c} onClick={() => onPlay(c.uid)} />
+            <CardView card={c} onClick={() => onSelect(i)} />
           </div>
         );
       })}
@@ -441,6 +458,16 @@ export default function GameBoard() {
   // 6.7c-2: banner giliran + ref mirror gs (dibaca flashTurnBanner).
   const [banner, setBanner] = useState<{ turn: number; who: string } | null>(null);
   const gsRef = useRef<GameState | null>(null);
+  if (typeof window !== 'undefined') (window as any).__gs = gsRef; // TEMP DEBUG: hapus sebelum commit
+
+  // ── 6.7c-4: state interaksi (transien, sesuai catatan types/game.ts: bukan di GameState) ──
+  type AtkSrcT = { card: BoardCard; row: 'front' | 'back'; idx: number };
+  const [result, setResult] = useState<null | 'victory' | 'defeat'>(null);
+  const [selHand, setSelHand] = useState<number | null>(null);
+  const [selTrap, setSelTrap] = useState<number | null>(null);
+  const [atkSrc, setAtkSrc] = useState<AtkSrcT | null>(null);
+  const atkSrcRef = useRef<AtkSrcT | null>(null);
+  useEffect(() => { atkSrcRef.current = atkSrc; }, [atkSrc]);
   const startedRef = useRef(false);
 
   // Load kartu + set RAW demo (turn-start diterapkan oleh startPlayerTurn via
@@ -459,48 +486,228 @@ export default function GameBoard() {
   // Sync gsRef tiap gs berubah (dibaca flashTurnBanner).
   useEffect(() => { gsRef.current = gs; }, [gs]);
 
-  const playCard = (uid: string) => {
-    const prev = gs;
-    if (!prev) return;
-    const card = prev.pHand.find((c) => c.uid === uid);
-    if (!card) return;
-    let key: 'pFront' | 'pBack' = 'pFront';
-    let idx = prev.pFront.findIndex((s) => s === null);
-    if (idx === -1) {
-      key = 'pBack';
-      idx = prev.pBack.findIndex((s) => s === null);
-    }
-    if (idx === -1) {
-      setMsg('Player Front & Back penuh — tidak bisa mainkan kartu');
-      return;
-    }
-    const newHand = prev.pHand.filter((c) => c.uid !== uid);
-    const newRow = [...prev[key]] as BoardRow;
-    newRow[idx] = card;
-    setMsg(`Mainkan ${card.name} -> ${key === 'pFront' ? 'Front' : 'Back'} slot ${idx + 1}`);
-    setGs({ ...prev, pHand: newHand, [key]: newRow });
+  // ── 6.7c-4: spendPlayerEnergy — port spendEnergy 1141 ──
+  const spendPlayerEnergy = (amount: number): boolean => {
+    if (!gsRef.current || gsRef.current.pEnergy < amount) return false;
+    setGs((prev) => (prev ? { ...prev, pEnergy: prev.pEnergy - amount } : prev));
+    return true;
   };
 
-  const returnCard = (uid: string) => {
-    const prev = gs;
-    if (!prev) return;
-    const fi = prev.pFront.findIndex((c) => c && c.uid === uid);
-    const bi = prev.pBack.findIndex((c) => c && c.uid === uid);
-    let key: 'pFront' | 'pBack' | null = null;
-    let idx = -1;
-    if (fi !== -1) {
-      key = 'pFront';
-      idx = fi;
-    } else if (bi !== -1) {
-      key = 'pBack';
-      idx = bi;
+  // ── 6.7c-4: effAtk — port verbatim 1481 (synergi faksi nc02/nc06/nc08/nc03; nc11 any-target) ──
+  const effAtk = (g: GameState, card: BoardCard, pos: 'front' | 'back'): number => {
+    if (!card || card.ctype !== 'unit') return 0;
+    let base = pos === 'back' ? card.defense : card.atk;
+    base += card._tempBoost || 0;
+    base -= card._tempDebuff || 0;
+    const isEnemyCard = [...g.eFront, ...g.eBack].some((x) => x && x.uid === card.uid);
+    const ownFront = isEnemyCard ? g.eFront : g.pFront;
+    const ownBack = isEnemyCard ? g.eBack : g.pBack;
+    const foeBack = isEnemyCard ? g.pBack : g.eBack;
+    if (pos === 'front') {
+      if (card.id === 'nc02') { const ally = [...ownFront, ...ownBack].filter((x) => x && x.uid !== card.uid && x.fac === 'Draconis'); if (ally.length) base += 3; }
+      if (card.id === 'nc06') { const fc = ownFront.filter(Boolean).length; if (fc === 1) base += 5; }
+      const knightsInBack = ownBack.filter((x) => x && x.id === 'nc08').length; if (knightsInBack) base += 5 * knightsInBack;
+      const sentCount = foeBack.filter((x) => x && x.id === 'nc03').length; base -= sentCount * 5;
     }
-    if (!key) return;
-    const card = prev[key][idx] as BoardCard;
-    const newRow = [...prev[key]] as BoardRow;
-    newRow[idx] = null;
-    setMsg(`Kembalikan ${card.name} ke hand`);
-    setGs({ ...prev, [key]: newRow, pHand: [...prev.pHand, card] });
+    return Math.max(0, base);
+  };
+
+  // ── 6.7c-4: checkWin — port 1213 (set gameover + result modal) ──
+  const checkWin = (g: GameState): GameState => {
+    if (g.eLP <= 0) { setResult('victory'); return { ...g, phase: 'gameover' }; }
+    if (g.pLP <= 0) { setResult('defeat'); return { ...g, phase: 'gameover' }; }
+    return g;
+  };
+
+  // ── 6.7c-4: resolveAttack (mutasi state g) — port 1811 (tanpa animasi; state langsung) ──
+  const resolveAttackInPlace = (
+    g: GameState, src: AtkSrcT, targetRow: 'front' | 'back', targetIdx: number,
+    atkVal: number, target: BoardCard | null,
+  ) => {
+    if (!target) {
+      const hasFront = g.eFront.some(Boolean);
+      if (hasFront) { setMsg('Cannot direct attack while enemy has Front Row!'); return; }
+      const dmg = atkVal;
+      g.eLP = Math.max(0, g.eLP - dmg);
+      setMsg(`DIRECT ATTACK! ${src.card.name} → ${dmg} LP damage!`);
+      return;
+    }
+    const defVal = effAtk(g, target, targetRow);
+    const attName = src.card.name, defName = target.name;
+    if (atkVal > defVal) {
+      const dmg = atkVal - defVal;
+      if (!target.indestructible) { (targetRow === 'front' ? g.eFront : g.eBack)[targetIdx] = null; g.eGY.push(target); }
+      if (src.card.id === 'nc13') { if (g.pDeck.length > 0 && g.pHand.length < HAND_LIMIT) { g.pHand.push({ ...g.pDeck[0] }); g.pDeck = g.pDeck.slice(1); } }
+      g.eLP = Math.max(0, g.eLP - dmg);
+      setMsg(`${attName} (${atkVal}) destroyed ${defName} (${defVal})! Enemy takes ${dmg} LP damage.`);
+    } else if (defVal > atkVal) {
+      const dmg = defVal - atkVal;
+      const sRow = (src.row === 'front' ? g.pFront : g.pBack).slice() as BoardRow;
+      const dying = sRow[src.idx] || src.card;
+      sRow[src.idx] = null;
+      if (src.row === 'front') g.pFront = sRow; else g.pBack = sRow;
+      g.pGY.push(dying);
+      g.pLP = Math.max(0, g.pLP - dmg);
+      setMsg(`${defName} (${defVal}) destroyed ${attName} (${atkVal})! You take ${dmg} LP damage.`);
+    } else {
+      (targetRow === 'front' ? g.eFront : g.eBack)[targetIdx] = null; g.eGY.push(target);
+      const sRow = (src.row === 'front' ? g.pFront : g.pBack).slice() as BoardRow;
+      const dying = sRow[src.idx] || src.card;
+      sRow[src.idx] = null;
+      if (src.row === 'front') g.pFront = sRow; else g.pBack = sRow;
+      g.pGY.push(dying);
+      setMsg('Mutual destruction!');
+    }
+  };
+
+  // ── 6.7c-4: execAttack — port 1703 (front-row-first rule) + trap apply (simpel) + resolveAttack ──
+  const execAttack = (targetRow: 'front' | 'back', targetIdx: number, target: BoardCard | null, src: AtkSrcT) => {
+    const g0 = gsRef.current;
+    if (!g0) return;
+    const hasFront = g0.eFront.some(Boolean);
+    if (targetRow === 'back' && hasFront && src.card.id !== 'nc11') { setMsg('Must attack Front Row first!'); return; }
+    const atkVal = effAtk(g0, src.card, 'front');
+    // clone (BoardCard React = data statis, aman di-JSON) utk apply trapFn + resolve
+    const g: GameState = JSON.parse(JSON.stringify(g0));
+    let negate = g._negate;
+    for (const trap of g.pBack.filter((c) => c && c._isTrap && c._trapReady) as BoardCard[]) {
+      if (trap.trapFn) trap.trapFn(g, { attacker: src.card, targetRow });
+      if (g._negate) negate = true;
+    }
+    if (negate) {
+      setMsg('Attack negated by trap!');
+      g.atk = false; g._negate = false;
+      setGs(g);
+      setAtkSrc(null);
+      return;
+    }
+    const sRow = (src.row === 'front' ? g.pFront : g.pBack).slice() as BoardRow;
+    if (sRow[src.idx]) sRow[src.idx] = { ...sRow[src.idx]!, _hasAttacked: true };
+    if (src.row === 'front') g.pFront = sRow; else g.pBack = sRow;
+    g.atk = false;
+    resolveAttackInPlace(g, src, targetRow, targetIdx, atkVal, target);
+    setGs(checkWin(g));
+    setAtkSrc(null);
+  };
+
+  // ── 6.7c-4: handSelect — port handClick 1510 (gate phase + tipe + energi + seleksi) ──
+  const handSelect = (idx: number) => {
+    const g = gsRef.current;
+    if (!g || !g.isPlayer) return;
+    const c = g.pHand[idx];
+    if (!c) return;
+    const phase = g.phase;
+    // deselect jika klik kartu yg sama
+    if (selHand === idx) { setSelHand(null); setMsg('Deselected hand card.'); return; }
+    if (selTrap === idx) { setSelTrap(null); setMsg('Deselected trap.'); return; }
+    if (c.ctype === 'attack' && phase === 'battle') {
+      setGs((prev) => { if (!prev) return prev; const hand = [...prev.pHand]; const [card] = hand.splice(idx, 1); return { ...prev, pHand: hand, pGY: [...prev.pGY, card] }; });
+      if (c.useFn) c.useFn(g);
+      setMsg(`Played ${c.name} (attack) → GY`);
+      setSelHand(null); setSelTrap(null);
+      return;
+    }
+    if (c.ctype === 'tactic' && phase === 'main') {
+      setGs((prev) => { if (!prev) return prev; const hand = [...prev.pHand]; const [card] = hand.splice(idx, 1); return { ...prev, pHand: hand, pGY: [...prev.pGY, card] }; });
+      if (c.useFn) c.useFn(g);
+      setMsg(`Played ${c.name} (tactic) → GY`);
+      setSelHand(null); setSelTrap(null);
+      return;
+    }
+    if (c.ctype === 'trap' && phase === 'main') {
+      setSelTrap(idx); setSelHand(null);
+      setMsg(`Selected ${c.name}. Click an empty BACK ROW slot to set it face-down (no Energy).`);
+      return;
+    }
+    if (c.ctype === 'unit' && phase === 'main') {
+      if (g.pEnergy < c.cost) { setMsg(`Not enough energy! Need ${c.cost}⚡, have ${g.pEnergy}⚡.`); return; }
+      setSelHand(idx); setSelTrap(null);
+      setMsg(`Selected ${c.name} (${c.cost}⚡). Click an empty field slot to summon.`);
+      return;
+    }
+    setSelHand(null); setSelTrap(null);
+  };
+
+  // ── 6.7c-4: slotClick — port slotClick 1555 (attack declare/target + trap placement + summon) ──
+  const slotClick = (
+    side: 'player' | 'enemy', rowType: 'front' | 'back', idx: number,
+    isEmpty: boolean, _card?: BoardCard,
+  ) => {
+    const g = gsRef.current;
+    if (!g || !g.isPlayer) return;
+
+    // ATTACK: sudah deklarasi (g.atk true)
+    if (g.phase === 'battle' && g.atk) {
+      const src = atkSrcRef.current;
+      if (!src) {
+        if (side !== 'player') { setMsg('Click YOUR Front Row card first.'); return; }
+        if (rowType !== 'front') { setMsg('Only Front Row cards can attack.'); return; }
+        if (isEmpty) return;
+        const cc = g.pFront[idx];
+        if (!cc) return;
+        if (cc._hasAttacked) { setMsg(`${cc.name} has already attacked this turn!`); return; }
+        setAtkSrc({ card: cc, row: 'front', idx });
+        setMsg(`⚔ ${cc.name} attacking! Click an enemy card to target.`);
+        return;
+      }
+      if (side !== 'enemy') { setMsg('Click ENEMY target.'); return; }
+      const target = isEmpty ? null : (rowType === 'front' ? g.eFront : g.eBack)[idx];
+      execAttack(rowType, idx, target, src);
+      return;
+    }
+
+    // ATTACK: deklarasi pertama (player front)
+    if (g.phase === 'battle' && side === 'player' && rowType === 'front') {
+      if (isEmpty) return;
+      const cc = g.pFront[idx];
+      if (!cc) return;
+      if (cc._hasAttacked) { setMsg(`${cc.name} has already attacked this turn!`); return; }
+      setAtkSrc({ card: cc, row: 'front', idx });
+      setGs((prev) => (prev ? { ...prev, atk: true } : prev)); // port verbatim prototype 1584: gs.atk=true
+      setMsg(`⚔ ${cc.name} attacking! Click an enemy card to target.`);
+      return;
+    }
+
+    // MAIN: pasang trap (back row, gratis)
+    if (g.phase === 'main' && side === 'player' && rowType === 'back' && selTrap !== null) {
+      const t = g.pHand[selTrap];
+      if (!t || t.ctype !== 'trap') { setSelTrap(null); return; }
+      if (!isEmpty) { setMsg('That Back Row slot is occupied.'); return; }
+      setGs((prev) => {
+        if (!prev) return prev;
+        const hand = [...prev.pHand];
+        const [card] = hand.splice(selTrap, 1);
+        const dRow = [...prev.pBack] as BoardRow;
+        dRow[idx] = { ...card, uid: card.uid + '_t' + Date.now(), _isTrap: true, _trapReady: true } as BoardCard;
+        return { ...prev, pHand: hand, pBack: dRow };
+      });
+      setSelTrap(null);
+      setMsg(`${t.name} set face-down in Back Row.`);
+      return;
+    }
+
+    // MAIN: summon unit (spend energi)
+    if (g.phase === 'main' && side === 'player' && selHand !== null) {
+      const c = g.pHand[selHand];
+      if (!c) { setSelHand(null); return; }
+      if (!isEmpty) { setMsg('Slot occupied.'); return; }
+      if (!spendPlayerEnergy(c.cost)) { setMsg('Not enough energy!'); return; }
+      setGs((prev) => {
+        if (!prev) return prev;
+        const hand = [...prev.pHand];
+        const [card] = hand.splice(selHand, 1);
+        const dRow = (rowType === 'front' ? [...prev.pFront] : [...prev.pBack]) as BoardRow;
+        dRow[idx] = { ...card, uid: card.uid + '_' + Date.now() } as BoardCard;
+        const ng = { ...prev, pHand: hand, pFront: rowType === 'front' ? dRow : prev.pFront, pBack: rowType === 'back' ? dRow : prev.pBack };
+        if (rowType === 'front' && !dRow[idx]?._frontOnceUsed && card.frontOnceFn) { dRow[idx]!._frontOnceUsed = true; card.frontOnceFn(ng); }
+        if (rowType === 'back' && !dRow[idx]?._backOnceUsed && card.backOnceFn) { dRow[idx]!._backOnceUsed = true; card.backOnceFn(ng); }
+        return ng;
+      });
+      setSelHand(null);
+      setMsg(`Summoned ${c.name}! Energy: ${g.pEnergy - c.cost}⚡`);
+      return;
+    }
+
   };
 
   // ── 6.7c-1: Phase strip + setPhase() — port verbatim dari prototype 1153–1162 ──
@@ -691,7 +898,13 @@ export default function GameBoard() {
           <div className="field-pile-slot">
             <FieldPile icon="💀" count={gs.eGY.length} label="GY" onClick={() => setModal({ title: 'Enemy Graveyard', body: `${gs.eGY.length} kartu di Graveyard musuh.` })} />
           </div>
-          <FieldRow row={gs.eBack} />
+          <FieldRow
+            row={gs.eBack}
+            onCardClick={(c, i) => slotClick('enemy', 'back', i, false, c)}
+            onEmptySlotClick={(i) => slotClick('enemy', 'back', i, true)}
+            dropActive={gs.phase === 'battle' && gs.atk}
+            dropDanger
+          />
           <div className="field-pile-slot side-right">
             <FieldPile icon="🎴" count={gs.eDeck.length} label="Deck" onClick={() => setModal({ title: 'Enemy Deck', body: `${gs.eDeck.length} kartu tersisa (face-down).` })} />
           </div>
@@ -701,7 +914,13 @@ export default function GameBoard() {
           <div className="field-pile-slot">
             <FieldPile icon="🌀" count={gs.eFusion.length} label="Fusion" fusion onClick={() => setModal({ title: 'Enemy Fusion', body: `${gs.eFusion.length} kartu fusion musuh (face-down).` })} />
           </div>
-          <FieldRow row={gs.eFront} />
+          <FieldRow
+            row={gs.eFront}
+            onCardClick={(c, i) => slotClick('enemy', 'front', i, false, c)}
+            onEmptySlotClick={(i) => slotClick('enemy', 'front', i, true)}
+            dropActive={gs.phase === 'battle' && gs.atk}
+            dropDanger
+          />
         </div>
       </div>
 
@@ -714,14 +933,26 @@ export default function GameBoard() {
           <div className="field-pile-slot">
             <FieldPile icon="🌀" count={gs.pFusion.length} label="Fusion" fusion onClick={() => setModal({ title: 'Player Fusion', body: `${gs.pFusion.length} kartu fusion tersedia.` })} />
           </div>
-          <FieldRow row={gs.pFront} onCardClick={(c) => returnCard(c.uid)} />
+          <FieldRow
+            row={gs.pFront}
+            onCardClick={(c, i) => slotClick('player', 'front', i, false, c)}
+            onEmptySlotClick={(i) => slotClick('player', 'front', i, true)}
+            dropActive={gs.phase === 'main' && (selHand !== null || selTrap !== null)}
+            attackerUid={atkSrc && atkSrc.row === 'front' ? atkSrc.card.uid : null}
+          />
         </div>
         <div className="row-group">
           <div className="row-label">DEF</div>
           <div className="field-pile-slot">
             <FieldPile icon="💀" count={gs.pGY.length} label="GY" onClick={() => setModal({ title: 'Player Graveyard', body: `${gs.pGY.length} kartu di Graveyard kamu.` })} />
           </div>
-          <FieldRow row={gs.pBack} onCardClick={(c) => returnCard(c.uid)} />
+          <FieldRow
+            row={gs.pBack}
+            onCardClick={(c, i) => slotClick('player', 'back', i, false, c)}
+            onEmptySlotClick={(i) => slotClick('player', 'back', i, true)}
+            dropActive={gs.phase === 'main' && (selHand !== null || selTrap !== null)}
+            attackerUid={atkSrc && atkSrc.row === 'back' ? atkSrc.card.uid : null}
+          />
           <div className="field-pile-slot side-right">
             <FieldPile icon="🎴" count={gs.pDeck.length} label="Deck" onClick={() => setModal({ title: 'Player Deck', body: `${gs.pDeck.length} kartu tersisa (face-down).` })} />
           </div>
@@ -732,7 +963,7 @@ export default function GameBoard() {
       <div className="hand-row player-hand-row">
         <SideBadge side="you" lp={gs.pLP} energy={gs.pEnergy} energyMax={gs.pEnergyMax} />
         <div className="hand-zone">
-          <PlayerHandFan hand={gs.pHand} onPlay={playCard} />
+          <PlayerHandFan hand={gs.pHand} selIdx={selHand} onSelect={handSelect} />
         </div>
         <div className="turn-btns">
           <div className="cbtn-wrap">
@@ -795,6 +1026,21 @@ export default function GameBoard() {
             >
               Confirm Discard
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Result modal (6.7c-4) — victory/defeat saat LP 0 */}
+      {result && (
+        <div className="mbg">
+          <div className="mbox" style={{ textAlign: 'center' }}>
+            <h2 style={{ fontSize: 32, color: result === 'victory' ? 'var(--gold)' : 'var(--red)', border: 'none' }}>
+              {result === 'victory' ? 'VICTORY' : 'DEFEAT'}
+            </h2>
+            <p style={{ color: 'var(--text-main)', fontSize: 15 }}>
+              {result === 'victory' ? 'Enemy LP reached 0!' : 'Your LP reached 0!'}
+            </p>
+            <button className="mbtn" onClick={() => setResult(null)}>Continue</button>
           </div>
         </div>
       )}
