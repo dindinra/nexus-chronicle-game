@@ -97,6 +97,39 @@ function applyTurnStart(gs: GameState): GameState {
   };
 }
 
+// PURE mirror applyTurnStart() untuk ENEMY (6.7c-3).
+// energyForTurn -> 1; reset temp/atk flag musuh; draw 1 (jika eDeck>0 & eHand<6);
+// turn++ (G.turn++ di prototype 1955); isPlayer=false; phase 'draw'.
+// firstTurn TIDAK diubah di sini — dilepas jadi false SETELAH enemy selesai turn 1
+// (lihat startEnemyTurn loop 6).
+function applyEnemyTurnStart(gs: GameState): GameState {
+  const gain = 1;
+  const canDraw = gs.eDeck.length > 0 && gs.eHand.length < HAND_LIMIT;
+  const drawn = canDraw ? gs.eDeck[0] : null;
+  const resetTemp = (row: BoardRow): BoardRow =>
+    row.map((c) => (c ? { ...c, _tempBoost: 0, _tempDebuff: 0 } : null));
+  const resetAtk = (row: BoardRow): BoardRow =>
+    row.map((c) => (c ? { ...c, _hasAttacked: false } : null));
+  return {
+    ...gs,
+    isPlayer: false,
+    _negate: false,
+    _freeTeleport: false,
+    atk: false,
+    turn: gs.turn + 1,
+    eTurnCount: gs.eTurnCount + 1,
+    eEnergy: gs.eEnergy + gain,
+    eEnergyMax: gs.eEnergyMax + gain,
+    eFront: resetAtk(resetTemp(gs.eFront)),
+    eBack: resetAtk(resetTemp(gs.eBack)),
+    pFront: resetTemp(gs.pFront),
+    pBack: resetTemp(gs.pBack),
+    eHand: canDraw ? [...gs.eHand, { ...drawn! }] : gs.eHand,
+    eDeck: canDraw ? gs.eDeck.slice(1) : gs.eDeck,
+    phase: 'draw',
+  };
+}
+
 // State demo awal untuk verifikasi interaksi (bukan engine nyata).
 // Raw initial (energi 0, hand 4, deck 6, phase 'draw'); turn-start diterapkan
 // lewat applyTurnStart() di load effect.
@@ -232,6 +265,21 @@ const BOARD_CSS = `
   color: #0b0e16; background: var(--accent);
   box-shadow: 0 0 12px rgba(124,155,255,.65);
 }
+
+/* Discard modal (port verbatim prototype 381–453) — hand > HAND_LIMIT saat end phase. */
+.nc-board .mbg { position: fixed; inset: 0; background: rgba(4,5,8,.82); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+.nc-board .mbox { background: var(--panel-bg-solid); border: 1px solid var(--panel-border); border-radius: 16px; padding: 22px; max-width: 600px; width: 100%; max-height: 84vh; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,.6); }
+.nc-board .mbox h2 { font-family: var(--font-display); font-size: 21px; color: var(--gold); margin-bottom: 12px; text-transform: uppercase; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.nc-board .mbox p { color: var(--text-muted); font-size: 12px; margin-bottom: 12px; line-height: 1.5; }
+.nc-board .mcards { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.nc-board .mbtn { width: 100%; padding: 13px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,.05); color: #fff; font-family: var(--font-display); font-size: 15px; font-weight: 700; text-transform: uppercase; cursor: pointer; margin-top: 12px; transition: .18s; }
+.nc-board .mbtn:hover { background: rgba(255,255,255,.1); border-color: var(--gold); color: var(--gold); }
+.nc-board .mbtn:disabled { opacity: .35; cursor: not-allowed; }
+.nc-board .disc-card { background: rgba(255,255,255,.03); border: 1px solid var(--line); border-radius: 10px; padding: 10px; width: 150px; cursor: pointer; font-size: 11px; transition: .15s; }
+.nc-board .disc-card:hover { border-color: var(--red); background: rgba(255,84,112,.06); }
+.nc-board .disc-card.disc-sel { border-color: var(--red); background: rgba(255,84,112,.14); }
+.nc-board .disc-card .dn { font-weight: 700; margin-bottom: 4px; color: #fff; }
+.nc-board .disc-card .ds { color: var(--text-muted); font-size: 9px; margin-top: 2px; }
 
 /* Turn banner (prototype baris 217-226) — flashes "Turn N / Your Turn" centered. */
 .nc-board .turn-banner {
@@ -388,6 +436,8 @@ export default function GameBoard() {
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [modal, setModal] = useState<{ title: string; body: string } | null>(null);
+  // 6.7c-3: discard modal (hand > HAND_LIMIT saat end phase).
+  const [discardSel, setDiscardSel] = useState<Set<number> | null>(null);
   // 6.7c-2: banner giliran + ref mirror gs (dibaca flashTurnBanner).
   const [banner, setBanner] = useState<{ turn: number; who: string } | null>(null);
   const gsRef = useRef<GameState | null>(null);
@@ -458,13 +508,89 @@ export default function GameBoard() {
   const setPhase = (ph: GameState['phase']) => {
     setGs((prev) => (prev ? { ...prev, phase: ph } : prev));
   };
-  // Tombol battle/end — wiring minimal agar strip bisa diverifikasi interaktif.
-  // Logika penuh enterBattle/doEnd (firstTurn check, finishEndPhase, enemy turn) = 6.7c-3.
+  // ── 6.7c-3: enterBattle() — port 1690 ──
   const enterBattle = () => {
-    if (gs && gs.isPlayer && gs.phase === 'main' && !gs.firstTurn) setPhase('battle');
+    if (!gs) return;
+    if (gs.firstTurn) { setMsg('Cannot attack on Turn 1!'); return; }
+    if (gs.phase !== 'main') return;
+    setMsg('Battle Phase! Click your Front Row card to attack.');
+    setPhase('battle');
   };
+
+  // ── 6.7c-3: doEnd() — port 1885 (clear flag, cek hand>limit -> discard, else finishEndPhase) ──
   const doEnd = () => {
-    if (gs && gs.isPlayer && (gs.phase === 'main' || gs.phase === 'battle')) setPhase('end');
+    if (!gs) return;
+    if (!gs.isPlayer) return;
+    if (!(gs.phase === 'main' || gs.phase === 'battle')) return;
+    if (gs.pHand.length > HAND_LIMIT) {
+      showDiscardModal();
+      return;
+    }
+    finishEndPhase();
+  };
+
+  // ── 6.7c-3: finishEndPhase() — port 1943 (setPhase('end') -> 700ms -> startEnemyTurn) ──
+  const finishEndPhase = () => {
+    setPhase('end');
+    setMsg('End Phase. Passing turn…');
+    // prototype 1949: setTimeout(() => startEnemyTurn(), 700)
+    setTimeout(() => startEnemyTurn(), 700);
+  };
+
+  // ── 6.7c-3: discard modal (port 1896/1919/1929) — hand > HAND_LIMIT saat end phase ──
+  const showDiscardModal = () => {
+    setDiscardSel(new Set<number>());
+  };
+  const toggleDiscardSel = (idx: number) => {
+    setDiscardSel((prev) => {
+      if (!prev) return prev;
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      return next;
+    });
+  };
+  const confirmDiscard = () => {
+    if (!gs || !discardSel) return;
+    const excess = gs.pHand.length - HAND_LIMIT;
+    if (discardSel.size !== excess) return;
+    const indices = [...discardSel].sort((a, b) => b - a);
+    setGs((prev) => {
+      if (!prev) return prev;
+      const hand = [...prev.pHand];
+      const gy = [...prev.pGY];
+      for (const i of indices) {
+        const [c] = hand.splice(i, 1);
+        if (c) gy.push(c);
+      }
+      return { ...prev, pHand: hand, pGY: gy };
+    });
+    setDiscardSel(null);
+    finishEndPhase();
+  };
+
+  // ── 6.7c-3: startEnemyTurn() — port 1953 (transition MINIMAL, tanpa AI) ──
+  // aiMainPhase + aiAttackSequence = 6.7c-5. Sekarang musuh cuma lewat
+  // giliran (draw + regen + reset flag) lalu balik ke player (firstTurn=false
+  // setelah enemy selesai turn 1, sesuai loop prototype 6).
+  const startEnemyTurn = () => {
+    const cur = gsRef.current;
+    const turn = (cur ? cur.turn : 1) + 1;
+    flashTurnBanner(turn, false);
+    setGs((prev) => (prev ? applyEnemyTurnStart(prev) : prev));
+    // Auto -> MAIN 600ms (prototype 1962)
+    setTimeout(() => {
+      setPhase('main');
+      // 6.7c-5: di sini aiMainPhase() lalu BTL lalu aiAttackSequence (jika !firstTurn).
+      // Scaffold: musuh lewat giliran tanpa AI -> 600ms -> END -> balik player.
+      setTimeout(() => {
+        setPhase('end');
+        setTimeout(() => {
+          // firstTurn dilepas SETELAH enemy selesai turn 1 (prototype loop 6).
+          setGs((prev) => (prev ? { ...prev, firstTurn: false } : prev));
+          startPlayerTurn();
+        }, 700);
+      }, 600);
+    }, 600);
   };
 
   // ── 6.7c-2: flashTurnBanner() — port 1167–1173 (banner "Turn N" 1400ms) ──
@@ -481,8 +607,9 @@ export default function GameBoard() {
   const startPlayerTurn = () => {
     const cur = gsRef.current;
     const turn = cur ? cur.turn : 1;
-    const isPlayer = cur ? cur.isPlayer : true;
-    flashTurnBanner(turn, isPlayer);
+    // startPlayerTurn SELALU = giliran player (applyTurnStart paksa isPlayer:true)
+    // -> banner "Your Turn" (bukan cur.isPlayer yang bisa stale=enemy di loop).
+    flashTurnBanner(turn, true);
     setGs((prev) => (prev ? applyTurnStart(prev) : prev));
     // Auto -> MAIN setelah 600ms (prototype 1200).
     setTimeout(() => setPhase('main'), 600);
@@ -632,6 +759,45 @@ export default function GameBoard() {
       
 
       {modal && <PlaceholderModal title={modal.title} body={modal.body} onClose={() => setModal(null)} />}
+
+      {/* Discard modal (6.7c-3) — hand > HAND_LIMIT saat end phase. */}
+      {discardSel !== null && (
+        <div className="mbg">
+          <div className="mbox" onClick={(e) => e.stopPropagation()}>
+            <h2>⚠ Hand Limit — Discard {gs.pHand.length - HAND_LIMIT} Card{gs.pHand.length - HAND_LIMIT > 1 ? 's' : ''}</h2>
+            <p>You have {gs.pHand.length} cards but the limit is 6. Select{' '}
+              <strong style={{ color: 'var(--red)' }}>{gs.pHand.length - HAND_LIMIT}</strong>{' '}
+              card{gs.pHand.length - HAND_LIMIT > 1 ? 's' : ''} to send to the Graveyard.
+            </p>
+            <div className="mcards">
+              {gs.pHand.map((c, i) => (
+                <div
+                  key={c.uid}
+                  className={`disc-card ${discardSel.has(i) ? 'disc-sel' : ''}`}
+                  onClick={() => toggleDiscardSel(i)}
+                >
+                  <div className="dn">{c.name}</div>
+                  <div className="ds">{c.ctype.toUpperCase()} · {c.fac || ''} · {c.rarity ?? ''}</div>
+                  {c.ctype === 'unit' && (
+                    <div className="ds">ATK {c.atk} · DEF {c.defense} · {c.cost}⚡</div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text-muted)' }}>
+              Selected: {discardSel.size} / {gs.pHand.length - HAND_LIMIT}
+            </div>
+            <button
+              className="mbtn"
+              disabled={discardSel.size !== gs.pHand.length - HAND_LIMIT}
+              onClick={confirmDiscard}
+              style={{ borderColor: 'var(--red)', color: 'var(--red)' }}
+            >
+              Confirm Discard
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
