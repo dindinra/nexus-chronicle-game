@@ -134,13 +134,24 @@ Sumber: `newGame` 1226 → `showCoinFlip` 1236 → `afterCoin` 1250 → `startPl
 
 ---
 
-## 6. STATUS REACT SAAT INI (`frontend/src/pages/GameBoard.tsx`, ~459 baris)
-- **TIDAK ADA phase strip DRW/MAIN/BTL/END** — cuma teks `Turn {gs.turn} · Phase {gs.phase}` (baris 381). ⚠️ Koreksi penting: strip harus DIBANGUN dari nol (port HTML `#ph-*` + CSS `.ph.active`), bukan cuma wiring.
-- `buildDemoState` (61): `phase:'main'`, `turn:1`, `firstTurn:true`, `pEnergy:5/pEnergyMax:10` (demo, buang di 6.7c), `atk:false`.
-- `playCard` (312): klik hand → taruh ke slot kosong **tanpa cek phase/energi/tipe** (perilaku demo 6.7b). Harus di-gate per phase di 6.7c.
-- `returnCard` (334): klik board player → kembalikan ke hand. **Tetap dipertahankan**.
-- Tidak ada engine: tidak ada draw, regen, end turn, enemy turn, battle.
-- `inst()`/`instF()` (23/36) sudah bikin BoardCard dengan field `_hasAttacked`, `_frontOnceUsed`, dll — cocok untuk engine.
+## 6. STATUS REACT SAAT INI (`frontend/src/pages/GameBoard.tsx`, ~1050 baris — 2026-07-13)
+> Diperbarui setelah 6.7c-4 selesai. Snapshot state kode SEKARANG — jangan asumsikan dari ingatan.
+
+- **Phase strip SUDAH ADA** (6.7c-1): `.phase-strip-field` dengan `.ph` DRW/MAIN/BTL/END, `.ph.active` highlight, tombol `.cb-battle`/`.cb-end` (disabled derived dari `gs.phase`/`gs.firstTurn`).
+- **Engine giliran LENGKAP** (6.7c-2/3): `startPlayerTurn` (draw+regen+banner), `applyTurnStart` (PURE/idempoten — fix race StrictMode), `enterBattle`/`doEnd`/`finishEndPhase`, `startEnemyTurn` (scaffold MINIMAL, AI = 6.7c-5), discard modal.
+- **`slotClick` (port 1555) SUDAH ADA** (6.7c-4) — satu fungsi gate per phase:
+  - `g.phase==='battle' && g.atk` (sudah deklarasi) → resolve ke `execAttack`.
+  - `g.phase==='battle' && side==='player' && rowType==='front'` → deklarasi attacker: `setAtkSrc(...)` + **`setGs(prev=>({...prev,atk:true}))`** (FIX gs.atk bug, verbatim 1584).
+  - `g.phase==='main' && rowType==='back' && selTrap!==null` → pasang trap face-down (gratis).
+  - `g.phase==='main' && selHand!==null` → summon (spend energi, jalankan frontOnceFn/backOnceFn).
+  - ⚠️ **`returnCard` SUDAH DIHAPUS** (6.7c-4) — klik kartu board di MAIN tidak lagi balik ke hand. JANGAN kembalikan.
+- **State baru (di `gs` / refs):** `selHand`, `selTrap`, `atkSrc` (state), `atkSrcRef` (ref, sync via `gsRef`), `result` ('victory'|'defeat'|null → modal), `gs.atk` (bool deklarasi attack).
+- **Fungsi port verbatim:** `execAttack`(1703), `resolveAttackInPlace`(1811), `effAtk`(1481), `checkWin`(1213), `spendPlayerEnergy`(1141), `handSelect`(port handClick 1510), `processTrapQueue` (jalankan `trapFn` sebelum damage calc).
+- **`FieldRow`/`PlayerHandFan` di-refactor:** `onClick` di `.nc-card` (bukan wrapper); `FieldRow` pass `faceDown={c._isTrap}` ke `CardView` (trap → `.card-back`); `PlayerHandFan` terima `selIdx` → `.sel` class.
+- **Type stubs (`frontend/src/types/cards.ts`):** `useFn`, `frontOnceFn`, `backOnceFn`, `trapFn`, `gyFn` (import `GameState`, `Row`).
+- `buildDemoState`: `phase:'main'`, `turn:1`, `firstTurn:true`, `pEnergy:1/pEnergyMax:1` (BUKAN 5/10 — sudah dibetulkan ikut prototype energi konstan 1), `atk:false`.
+- `inst()`/`instF()` sudah bikin BoardCard dengan field `_hasAttacked`, `_frontOnceUsed`, `_isTrap`, `_trapReady`, `_tempBoost/_tempDebuff` — cocok untuk engine.
+- **Siap untuk 6.7c-5:** `startEnemyTurn` (1953) sudah scaffold (transition minimal, belum AI). Yang harus ditambah: `aiMainPhase`(2001) + `aiAttackSequence` (panggil `execAttack` untuk serangan musuh) + wiring loop kembali ke `startPlayerTurn`. Lihat §7 rencana + §8 quick-ref.
 
 ---
 
@@ -148,7 +159,7 @@ Sumber: `newGame` 1226 → `showCoinFlip` 1236 → `afterCoin` 1250 → `startPl
 1. **6.7c-1** — Phase strip UI (DRW/MAIN/BTL/END) + tombol battle/end + `setPhase()` React (highlight `.active` + disabled logic dari prototype 1155–1162).
 2. **6.7c-2** — Engine giliran player: `startPlayerTurn` (DRW: energi mulai 0 +1/turn, auto-draw 1, banner "Turn N", auto→MAIN 600ms). *Keputusan coin flip: port modal coin flip atau langsung player duluan — TANYA user saat sub-step ini.*
 3. **6.7c-3** — `enterBattle()` + `doEnd()` + `finishEndPhase()` (gate tombol per `setPhase`).
-4. **6.7c-4** — Gate `playCard`/slot per phase + tipe kartu + cek energi (port `handClick`/`slotClick`).
+4. **6.7c-4** — Gate `playCard`/slot per phase + tipe kartu + cek energi (port `handClick`/`slotClick`) — **SELESAI (2026-07-13)**. returnCard dihapus, .sel/trap-face-down/TS-error difix (commit `a3289f9`).
 5. **6.7c-5** — Giliran musuh: `startEnemyTurn` + `aiMainPhase` (basic) + loop balik ke player.
 6. **6.7c-6** — Verifikasi computed style + screenshot (user review, pola §10), commit tiap sub-step.
 
