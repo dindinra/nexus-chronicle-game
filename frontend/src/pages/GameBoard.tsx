@@ -19,6 +19,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getCards } from '../api/cards';
 import type { Card, Fusion } from '../types/cards';
 import type { BoardCard, BoardRow, FusionInstance, GameState } from '../types/game';
+import { applyAiMainPhase, type FusionMaterialLookup } from '../engine/ai';
 import { CardView } from '../components/CardView';
 
 // Batas hand (prototype HAND_LIMIT = 6, baris 863). drawOne() skip bila >= limit.
@@ -458,7 +459,6 @@ export default function GameBoard() {
   // 6.7c-2: banner giliran + ref mirror gs (dibaca flashTurnBanner).
   const [banner, setBanner] = useState<{ turn: number; who: string } | null>(null);
   const gsRef = useRef<GameState | null>(null);
-  if (typeof window !== 'undefined') (window as any).__gs = gsRef; // TEMP DEBUG: hapus sebelum commit
 
   // ── 6.7c-4: state interaksi (transien, sesuai catatan types/game.ts: bukan di GameState) ──
   type AtkSrcT = { card: BoardCard; row: 'front' | 'back'; idx: number };
@@ -787,14 +787,29 @@ export default function GameBoard() {
     // Auto -> MAIN 600ms (prototype 1962)
     setTimeout(() => {
       setPhase('main');
-      // 6.7c-5: di sini aiMainPhase() lalu BTL lalu aiAttackSequence (jika !firstTurn).
-      // Scaffold: musuh lewat giliran tanpa AI -> 600ms -> END -> balik player.
+      // 6.7c-5a: enemy main phase — mainkan kartu (trap/heal/summon).
+      // fusion-material lookup dari DEMO_FUSIONS (eksekusi fusion DI-SKIP, lihat NOTES_6.7c.md).
+      const isEnemyFusionMat: FusionMaterialLookup = (id) => DEMO_FUSIONS.some((f) => f.mats.includes(id));
+      setGs((prev) => {
+        if (!prev) return prev;
+        const out = applyAiMainPhase(prev, isEnemyFusionMat);
+        return out;
+      });
+      // 6.7c-5b/5c: aiAttackSequence (jika !firstTurn) menyusul di battle phase.
       setTimeout(() => {
         setPhase('end');
         setTimeout(() => {
           // firstTurn dilepas SETELAH enemy selesai turn 1 (prototype loop 6).
-          setGs((prev) => (prev ? { ...prev, firstTurn: false } : prev));
-          startPlayerTurn();
+          // 6.7c-5a turn-counter fix: port prototype 1983 — G.turn++ tepat
+          // SEBELUM startPlayerTurn() (dalam proceedToEnd). Tanpa ini, 'Turn N'
+          // banner stale setelah giliran musuh. Karena gsRef async (update
+          // setelah render), hitung nextTurn lokal (pola spt startEnemyTurn) lalu
+          // pass ke startPlayerTurn agar banner tampil nilai BARU, & setGs
+          // turn:nextTurn agar header `Turn {gs.turn}` ikut konsisten.
+          const cur = gsRef.current;
+          const nextTurn = (cur ? cur.turn : 1) + 1;
+          setGs((prev) => (prev ? { ...prev, firstTurn: false, turn: nextTurn } : prev));
+          startPlayerTurn(nextTurn);
         }, 700);
       }, 600);
     }, 600);
@@ -811,9 +826,9 @@ export default function GameBoard() {
   // auto-draw 1 (bila hand<6 & deck>0), phase 'draw' -> auto 'main' 600ms.
   // State mutasi via PURE applyTurnStart() (lihat atas); gsRef sdh sync
   // di effect sblm-nya sehingga turn/isPlayer akurat.
-  const startPlayerTurn = () => {
+  const startPlayerTurn = (explicitTurn?: number) => {
     const cur = gsRef.current;
-    const turn = cur ? cur.turn : 1;
+    const turn = explicitTurn ?? (cur ? cur.turn : 1);
     // startPlayerTurn SELALU = giliran player (applyTurnStart paksa isPlayer:true)
     // -> banner "Your Turn" (bukan cur.isPlayer yang bisa stale=enemy di loop).
     flashTurnBanner(turn, true);
