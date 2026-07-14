@@ -188,3 +188,8 @@ Sumber: `newGame` 1226 → `showCoinFlip` 1236 → `afterCoin` 1250 → `startPl
 ---
 
 *File ini self-contained. Setelah /reset, baca NOTES_6.7c.md + AGENT_RULES.md + PROGRESS.md, lalu mulai 6.7c-1.*
+
+---
+
+## Gap Diketahui: Player-move / Teleport (tc01) belum di-port
+Ditemukan saat investigasi 6.7c-5b (row ATK/DEF): prototype punya mekanisme drag-drop move kartu antar row/slot (slotDrop, prototype 1653-1686) + Tactic tc01 Teleport (free move, prototype 945-947). Field _freeTeleport sudah dideklarasi di GameBoard.tsx (86/118/179) tapi BELUM ada handler drag-drop/aktivasi Teleport di UI player. Ini di luar scope 6.7c-5 (AI musuh tidak pakai move sebagai strategi, jadi tidak blocking). Perlu di-port di fase mendatang (kemungkinan 6.7d atau fase terpisah) sebelum player bisa pakai kartu tc01 Teleport secara fungsional.
