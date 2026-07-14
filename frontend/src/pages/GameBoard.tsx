@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getCards } from '../api/cards';
 import type { Card, Fusion } from '../types/cards';
 import type { BoardCard, BoardRow, FusionInstance, GameState } from '../types/game';
-import { applyAiMainPhase, type FusionMaterialLookup } from '../engine/ai';
+import { applyAiMainPhase, decideAiAttackTarget, type FusionMaterialLookup } from '../engine/ai';
 import { CardView } from '../components/CardView';
 
 // Batas hand (prototype HAND_LIMIT = 6, baris 863). drawOne() skip bila >= limit.
@@ -520,42 +520,60 @@ export default function GameBoard() {
   };
 
   // ── 6.7c-4: resolveAttack (mutasi state g) — port 1811 (tanpa animasi; state langsung) ──
+  // 6.7c-5b: generalize — tambah attackerSide ('player'|'enemy') agar SAME combat
+  // resolver dipakai utk serangan musuh (REUSE, TIDAK duplikat logic).
+  // player-path (default) identik dgn versi lama; enemy-path membalik arah row/LP/GY.
   const resolveAttackInPlace = (
     g: GameState, src: AtkSrcT, targetRow: 'front' | 'back', targetIdx: number,
-    atkVal: number, target: BoardCard | null,
+    atkVal: number, target: BoardCard | null, attackerSide: 'player' | 'enemy' = 'player',
   ) => {
+    const aFront = attackerSide === 'player' ? g.pFront : g.eFront;
+    const aBack = attackerSide === 'player' ? g.pBack : g.eBack;
+    const dFront = attackerSide === 'player' ? g.eFront : g.pFront;
+    const dBack = attackerSide === 'player' ? g.eBack : g.pBack;
+    const ownGY = attackerSide === 'player' ? g.pGY : g.eGY;
+    const foeGY = attackerSide === 'player' ? g.eGY : g.pGY;
+    const getOppLP = () => (attackerSide === 'player' ? g.eLP : g.pLP);
+    const setOppLP = (v: number) => { if (attackerSide === 'player') g.eLP = v; else g.pLP = v; };
+    const getOwnLP = () => (attackerSide === 'player' ? g.pLP : g.eLP);
+    const setOwnLP = (v: number) => { if (attackerSide === 'player') g.pLP = v; else g.eLP = v; };
+
     if (!target) {
-      const hasFront = g.eFront.some(Boolean);
-      if (hasFront) { setMsg('Cannot direct attack while enemy has Front Row!'); return; }
+      const hasFront = dFront.some(Boolean);
+      if (hasFront) { setMsg('Cannot direct attack while opponent has Front Row!'); return; }
       const dmg = atkVal;
-      g.eLP = Math.max(0, g.eLP - dmg);
+      setOppLP(Math.max(0, getOppLP() - dmg));
       setMsg(`DIRECT ATTACK! ${src.card.name} → ${dmg} LP damage!`);
       return;
     }
     const defVal = effAtk(g, target, targetRow);
     const attName = src.card.name, defName = target.name;
+    const aRow = src.row === 'front' ? aFront : aBack;
+    const dRow = targetRow === 'front' ? dFront : dBack;
     if (atkVal > defVal) {
       const dmg = atkVal - defVal;
-      if (!target.indestructible) { (targetRow === 'front' ? g.eFront : g.eBack)[targetIdx] = null; g.eGY.push(target); }
-      if (src.card.id === 'nc13') { if (g.pDeck.length > 0 && g.pHand.length < HAND_LIMIT) { g.pHand.push({ ...g.pDeck[0] }); g.pDeck = g.pDeck.slice(1); } }
-      g.eLP = Math.max(0, g.eLP - dmg);
-      setMsg(`${attName} (${atkVal}) destroyed ${defName} (${defVal})! Enemy takes ${dmg} LP damage.`);
+      if (!target.indestructible) { dRow[targetIdx] = null; foeGY.push(target); }
+      if (src.card.id === 'nc13' && attackerSide === 'player') { if (g.pDeck.length > 0 && g.pHand.length < HAND_LIMIT) { g.pHand.push({ ...g.pDeck[0] }); g.pDeck = g.pDeck.slice(1); } }
+      setOppLP(Math.max(0, getOppLP() - dmg));
+      setMsg(`${attName} (${atkVal}) destroyed ${defName} (${defVal})! ${attackerSide === 'player' ? 'Enemy' : 'You'} take ${dmg} LP damage.`);
     } else if (defVal > atkVal) {
       const dmg = defVal - atkVal;
-      const sRow = (src.row === 'front' ? g.pFront : g.pBack).slice() as BoardRow;
+      const sRow = aRow.slice() as BoardRow;
       const dying = sRow[src.idx] || src.card;
       sRow[src.idx] = null;
-      if (src.row === 'front') g.pFront = sRow; else g.pBack = sRow;
-      g.pGY.push(dying);
-      g.pLP = Math.max(0, g.pLP - dmg);
-      setMsg(`${defName} (${defVal}) destroyed ${attName} (${atkVal})! You take ${dmg} LP damage.`);
+      if (src.row === 'front') { if (attackerSide === 'player') g.pFront = sRow; else g.eFront = sRow; }
+      else { if (attackerSide === 'player') g.pBack = sRow; else g.eBack = sRow; }
+      ownGY.push(dying);
+      setOwnLP(Math.max(0, getOwnLP() - dmg));
+      setMsg(`${defName} (${defVal}) destroyed ${attName} (${atkVal})! ${attackerSide === 'player' ? 'You' : 'Enemy'} take ${dmg} LP damage.`);
     } else {
-      (targetRow === 'front' ? g.eFront : g.eBack)[targetIdx] = null; g.eGY.push(target);
-      const sRow = (src.row === 'front' ? g.pFront : g.pBack).slice() as BoardRow;
+      dRow[targetIdx] = null; foeGY.push(target);
+      const sRow = aRow.slice() as BoardRow;
       const dying = sRow[src.idx] || src.card;
       sRow[src.idx] = null;
-      if (src.row === 'front') g.pFront = sRow; else g.pBack = sRow;
-      g.pGY.push(dying);
+      if (src.row === 'front') { if (attackerSide === 'player') g.pFront = sRow; else g.eFront = sRow; }
+      else { if (attackerSide === 'player') g.pBack = sRow; else g.eBack = sRow; }
+      ownGY.push(dying);
       setMsg('Mutual destruction!');
     }
   };
@@ -585,7 +603,7 @@ export default function GameBoard() {
     if (sRow[src.idx]) sRow[src.idx] = { ...sRow[src.idx]!, _hasAttacked: true };
     if (src.row === 'front') g.pFront = sRow; else g.pBack = sRow;
     g.atk = false;
-    resolveAttackInPlace(g, src, targetRow, targetIdx, atkVal, target);
+    resolveAttackInPlace(g, src, targetRow, targetIdx, atkVal, target, 'player');
     setGs(checkWin(g));
     setAtkSrc(null);
   };
@@ -775,16 +793,54 @@ export default function GameBoard() {
     finishEndPhase();
   };
 
-  // ── 6.7c-3: startEnemyTurn() — port 1953 (transition MINIMAL, tanpa AI) ──
-  // aiMainPhase + aiAttackSequence = 6.7c-5. Sekarang musuh cuma lewat
-  // giliran (draw + regen + reset flag) lalu balik ke player (firstTurn=false
-  // setelah enemy selesai turn 1, sesuai loop prototype 6).
+  // ── 6.7c-3: startEnemyTurn() — port 1953 (draw, main) + 6.7c-5b battle phase ──
+  // aiMainPhase + aiAttackSequence di sini (Step 6.7c-5). Musuh lewat giliran
+  // (draw + regen + reset flag + main phase) lalu BATTLE phase (serang player
+  // kalau !firstTurn), lalu balik ke player (firstTurn=false setelah enemy
+  // selesai turn 1, sesuai loop prototype 6).
+
+  // 6.7c-5b: aiAttack + aiAttackSequence — port 2070/2064.
+  // REUSE resolveAttackInPlace('enemy') utk eksekusi combat (TIDAK duplikat logic combat).
+  // Rekursif dgn setTimeout 400ms pacing (sama prototype). Guard !firstTurn di startEnemyTurn (proto 1987).
+  const aiAttack = (ai: number, cb: () => void) => {
+    const g0 = gsRef.current;
+    if (!g0) { cb(); return; }
+    const att = g0.eFront[ai];
+    if (!att) { cb(); return; }
+    const decision = decideAiAttackTarget(g0, ai, effAtk);
+    if (decision.kind === 'none') { cb(); return; }
+    // clone utk mutasi (BoardCard data statis, aman di-JSON)
+    const g: GameState = JSON.parse(JSON.stringify(g0));
+    if (g.eFront[ai]) g.eFront[ai] = { ...g.eFront[ai]!, _hasAttacked: true };
+    const src: AtkSrcT = { card: g.eFront[ai]!, row: 'front', idx: ai };
+    const atkVal = effAtk(g, src.card, 'front');
+    const targetCard = decision.kind === 'direct'
+      ? null
+      : (decision.row === 'front' ? g.pFront[decision.idx] : g.pBack[decision.idx]) ?? null;
+    resolveAttackInPlace(
+      g, src,
+      decision.kind === 'direct' ? 'front' : decision.row,
+      decision.kind === 'direct' ? -1 : decision.idx,
+      atkVal, targetCard, 'enemy',
+    );
+    setGs(checkWin(g));
+    cb();
+  };
+
+  const aiAttackSequence = (onDone?: () => void) => {
+    const g = gsRef.current;
+    if (!g) { onDone?.(); return; }
+    const idx = g.eFront.findIndex((c) => c && !c._hasAttacked);
+    if (idx < 0) { onDone?.(); return; }
+    aiAttack(idx, () => setTimeout(() => aiAttackSequence(onDone), 400));
+  };
+
   const startEnemyTurn = () => {
     const cur = gsRef.current;
     const turn = (cur ? cur.turn : 1) + 1;
     flashTurnBanner(turn, false);
     setGs((prev) => (prev ? applyEnemyTurnStart(prev) : prev));
-    // Auto -> MAIN 600ms (prototype 1962)
+    // 600ms -> MAIN (prototype 1962)
     setTimeout(() => {
       setPhase('main');
       // 6.7c-5a: enemy main phase — mainkan kartu (trap/heal/summon).
@@ -792,24 +848,38 @@ export default function GameBoard() {
       const isEnemyFusionMat: FusionMaterialLookup = (id) => DEMO_FUSIONS.some((f) => f.mats.includes(id));
       setGs((prev) => {
         if (!prev) return prev;
-        const out = applyAiMainPhase(prev, isEnemyFusionMat);
-        return out;
+        return applyAiMainPhase(prev, isEnemyFusionMat);
       });
-      // 6.7c-5b/5c: aiAttackSequence (jika !firstTurn) menyusul di battle phase.
+      // 600ms -> BATTLE (prototype 1972)
       setTimeout(() => {
-        setPhase('end');
+        setPhase('battle');
+        // 600ms -> jalankan serangan (prototype 1975-1989)
         setTimeout(() => {
-          // firstTurn dilepas SETELAH enemy selesai turn 1 (prototype loop 6).
-          // 6.7c-5a turn-counter fix: port prototype 1983 — G.turn++ tepat
-          // SEBELUM startPlayerTurn() (dalam proceedToEnd). Tanpa ini, 'Turn N'
-          // banner stale setelah giliran musuh. Karena gsRef async (update
-          // setelah render), hitung nextTurn lokal (pola spt startEnemyTurn) lalu
-          // pass ke startPlayerTurn agar banner tampil nilai BARU, & setGs
-          // turn:nextTurn agar header `Turn {gs.turn}` ikut konsisten.
-          const cur = gsRef.current;
-          const nextTurn = (cur ? cur.turn : 1) + 1;
-          setGs((prev) => (prev ? { ...prev, firstTurn: false, turn: nextTurn } : prev));
-          startPlayerTurn(nextTurn);
+          // 6.7c-5b: port 1976 proceedToEnd (buang hand enemy >limit, lalu 1983 turn++)
+          const proceedToEnd = () => {
+            setPhase('end');
+            setGs((prev) => {
+              if (!prev) return prev;
+              let eHand = [...prev.eHand];
+              const eGY = [...prev.eGY];
+              while (eHand.length > HAND_LIMIT) { const d = eHand.pop()!; eGY.push(d); }
+              return { ...prev, eHand, eGY };
+            });
+            setTimeout(() => {
+              // 6.7c-5a turn-counter fix: port prototype 1983 — G.turn++ SEBELUM startPlayerTurn.
+              const cur2 = gsRef.current;
+              const nextTurn = (cur2 ? cur2.turn : 1) + 1;
+              setGs((prev) => (prev ? { ...prev, firstTurn: false, turn: nextTurn } : prev));
+              startPlayerTurn(nextTurn);
+            }, 600);
+          };
+          // 6.7c-5b: HANYA serang kalau !firstTurn (prototype 1987)
+          const g = gsRef.current;
+          if (g && !g.firstTurn) {
+            aiAttackSequence(proceedToEnd);
+          } else {
+            proceedToEnd();
+          }
         }, 700);
       }, 600);
     }, 600);

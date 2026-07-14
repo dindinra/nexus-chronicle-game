@@ -94,6 +94,48 @@ export function decideAiSummons(
   return plan;
 }
 
+export type AiAttackTarget =
+  | { kind: 'direct' }
+  | { kind: 'attack'; row: 'front' | 'back'; idx: number }
+  | { kind: 'none' };
+
+// 6.7c-5b: port target selection dari aiAttack (prototype 2070). Pure — NO mutasi/React.
+// effAtk di-inject agar logic combat TIDAK diduplikat (reuse effAtk GameBoard).
+// Aturan (verbatim prototype 2077-2110):
+//  - direct attack kalau player TIDAK punya front DAN TIDAK punya back non-trap/tactic
+//  - kalau ada front player: prefer trade yg MENANG (bunuh ancaman terbesar),
+//    else serang yg terlemah
+//  - else (ada back non-trap): target back non-trap/tactic pertama
+export function decideAiAttackTarget(
+  gs: GameState,
+  attackerIdx: number,
+  effAtk: (g: GameState, card: BoardCard, pos: 'front' | 'back') => number,
+): AiAttackTarget {
+  const att = gs.eFront[attackerIdx];
+  if (!att) return { kind: 'none' };
+  const hasPF = gs.pFront.some(Boolean);
+  const hasBackNonTrap = gs.pBack.filter((c) => c && !c._isTrap && !c._isTactic).some(Boolean);
+  if (!hasPF && !hasBackNonTrap) {
+    return { kind: 'direct' };
+  }
+  if (hasPF) {
+    const atkVal = effAtk(gs, att, 'front');
+    const candidates = gs.pFront
+      .map((c, i) => (c ? { c, i, d: effAtk(gs, c, 'front') } : null))
+      .filter((x): x is { c: BoardCard; i: number; d: number } => x !== null);
+    const winnable = candidates.filter((x) => x.d < atkVal);
+    const pick = (winnable.length
+      ? winnable.sort((a, b) => b.d - a.d)
+      : candidates.sort((a, b) => a.d - b.d))[0];
+    if (!pick) return { kind: 'none' };
+    return { kind: 'attack', row: 'front', idx: pick.i };
+  }
+  // no front, tapi back ada non-trap/tactic → serang back non-trap pertama
+  const ti = gs.pBack.findIndex((c) => c && !c._isTrap && !c._isTactic);
+  if (ti < 0) return { kind: 'none' };
+  return { kind: 'attack', row: 'back', idx: ti };
+}
+
 // ── Pure apply (canonical port, returns NEW GameState) ──
 
 export function applyAiMainPhase(

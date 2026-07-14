@@ -31,6 +31,7 @@ export interface BoardCard extends Card {
   // Flag opsional untuk kartu trap yang dipasang di board.
   _isTrap?: boolean;
   _trapReady?: boolean;
+  _isTactic?: boolean;
   _gyFired?: boolean;
 }
 
