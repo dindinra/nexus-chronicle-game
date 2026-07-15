@@ -134,11 +134,11 @@ Sumber: `newGame` 1226 → `showCoinFlip` 1236 → `afterCoin` 1250 → `startPl
 
 ---
 
-## 6. STATUS REACT SAAT INI (`frontend/src/pages/GameBoard.tsx`, ~1050 baris — 2026-07-13)
+## 6. STATUS REACT SAAT INI (`frontend/src/pages/GameBoard.tsx`, ~1134 baris — 2026-07-15)
 > Diperbarui setelah 6.7c-4 selesai. Snapshot state kode SEKARANG — jangan asumsikan dari ingatan.
 
 - **Phase strip SUDAH ADA** (6.7c-1): `.phase-strip-field` dengan `.ph` DRW/MAIN/BTL/END, `.ph.active` highlight, tombol `.cb-battle`/`.cb-end` (disabled derived dari `gs.phase`/`gs.firstTurn`).
-- **Engine giliran LENGKAP** (6.7c-2/3): `startPlayerTurn` (draw+regen+banner), `applyTurnStart` (PURE/idempoten — fix race StrictMode), `enterBattle`/`doEnd`/`finishEndPhase`, `startEnemyTurn` (scaffold MINIMAL, AI = 6.7c-5), discard modal.
+- **Engine giliran LENGKAP** (6.7c-2/3/5): `startPlayerTurn` (draw+regen+banner), `applyTurnStart` (PURE/idempoten), `enterBattle`/`doEnd`/`finishEndPhase`, `startEnemyTurn` (FULL: draw→main→battle→aiAttackSequence jika !firstTurn→proceedToEnd→startPlayerTurn), `aiMainPhase`, `aiAttackSequence`, discard modal.
 - **`slotClick` (port 1555) SUDAH ADA** (6.7c-4) — satu fungsi gate per phase:
   - `g.phase==='battle' && g.atk` (sudah deklarasi) → resolve ke `execAttack`.
   - `g.phase==='battle' && side==='player' && rowType==='front'` → deklarasi attacker: `setAtkSrc(...)` + **`setGs(prev=>({...prev,atk:true}))`** (FIX gs.atk bug, verbatim 1584).
@@ -151,7 +151,7 @@ Sumber: `newGame` 1226 → `showCoinFlip` 1236 → `afterCoin` 1250 → `startPl
 - **Type stubs (`frontend/src/types/cards.ts`):** `useFn`, `frontOnceFn`, `backOnceFn`, `trapFn`, `gyFn` (import `GameState`, `Row`).
 - `buildDemoState`: `phase:'main'`, `turn:1`, `firstTurn:true`, `pEnergy:1/pEnergyMax:1` (BUKAN 5/10 — sudah dibetulkan ikut prototype energi konstan 1), `atk:false`.
 - `inst()`/`instF()` sudah bikin BoardCard dengan field `_hasAttacked`, `_frontOnceUsed`, `_isTrap`, `_trapReady`, `_tempBoost/_tempDebuff` — cocok untuk engine.
-- **Siap untuk 6.7c-5:** `startEnemyTurn` (1953) sudah scaffold (transition minimal, belum AI). Yang harus ditambah: `aiMainPhase`(2001) + `aiAttackSequence` (panggil `execAttack` untuk serangan musuh) + wiring loop kembali ke `startPlayerTurn`. Lihat §7 rencana + §8 quick-ref.
+- **6.7c-5 SELESAI (2026-07-15):** `startEnemyTurn` + `aiMainPhase`(2001) + `aiAttackSequence`(panggil `resolveAttackInPlace(...,'enemy')`) + wiring loop balik `startPlayerTurn` SUDAH di-port & terverifikasi E2E. Fusion di-skip (intentional). Lihat §9 catatan pasca-6.7c-5.
 
 ---
 
@@ -161,7 +161,7 @@ Sumber: `newGame` 1226 → `showCoinFlip` 1236 → `afterCoin` 1250 → `startPl
 3. **6.7c-3** — `enterBattle()` + `doEnd()` + `finishEndPhase()` (gate tombol per `setPhase`).
 4. **6.7c-4** — Gate `playCard`/slot per phase + tipe kartu + cek energi (port `handClick`/`slotClick`) — **SELESAI (2026-07-13)**. returnCard dihapus, .sel/trap-face-down/TS-error difix (commit `a3289f9`).
 5. **6.7c-5** — Giliran musuh: `startEnemyTurn` + `aiMainPhase` (basic) + loop balik ke player.
-6. **6.7c-6** — Verifikasi computed style + screenshot (user review, pola §10), commit tiap sub-step.
+6. **6.7c-6** — Verifikasi computed style + screenshot (user review, pola §10), commit tiap sub-step. — **FOLDED into 6.7c-5 wrap-up (2026-07-15)** (lihat PROGRESS.md entry 6.7c-5/6.7c-6).
 
 ---
 
@@ -188,6 +188,37 @@ Sumber: `newGame` 1226 → `showCoinFlip` 1236 → `afterCoin` 1250 → `startPl
 ---
 
 *File ini self-contained. Setelah /reset, baca NOTES_6.7c.md + AGENT_RULES.md + PROGRESS.md, lalu mulai 6.7c-1.*
+
+---
+
+## 9. CATATAN PASCA-6.7c-5 (2026-07-15)
+
+**6.7c-5 SELESAI** — giliran musuh dasar full port & terverifikasi E2E (2.5 ronde penuh via browser; npm test 12/12).
+
+### 9.1 Komponen yang di-port
+- `aiMainPhase` (prototype 2001) → `applyAiMainPhase` (engine/ai.ts) — enemy summon/trap/heal, **fusion DI-SKIP** (demo state belum punya data fusion; scope 6.7c-5 = giliran musuh DASAR).
+- `aiAttackSequence` + `decideAiAttackTarget` (prototype 2064/2070) → enemy serang tiap front-row (row-aware via `effAtk`), 400ms pacing, front-row-first rule, nc11 any-target. Eksekusi combat pakai `resolveAttackInPlace(...,'enemy')` (REUSE, tidak duplikat logic).
+- `startEnemyTurn` wiring (prototype 1953): draw(`applyEnemyTurnStart`) → main(`applyAiMainPhase`) → battle → `aiAttackSequence(proceedToEnd)` HANYA jika `!firstTurn` → `proceedToEnd`(discard hand→GY, `firstTurn=false`, `turn++`) → `startPlayerTurn`.
+
+### 9.2 Turn-counter (quirk prototype, faithful)
+- `turn` naik +2 per enemy turn (applyEnemyTurnStart +1, proceedToEnd +1) — persis quirk prototype (startPlayerTurn tidak naik). Verifikasi E2E: Turn 1 → (enemy1) → 3 → (enemy2) → 5.
+
+### 9.3 Counter-damage combat — VERIFIKASI DEFINITIF (MEKANIK SAH, BUKAN BUG)
+- **Pertanyaan:** saat attacker KALAH trade (`defVal > atkVal`), apakah pemilik attacker kena LP damage?
+- **JAWABAN PROTOTYPE: YA.** Dua lokasi:
+  - Player menyerang & kalah: `resolveAttack` 1850-1863 → `gs.pLP -= (defVal-atkVal)`, pesan "You take X damage".
+  - Enemy menyerang & kalah: `resolveAiCombat` 2153-2161 → `G.eLP -= (atkD-atkA)`, pesan "Enemy takes X damage".
+- **Formula:** `dmg = |atkVal - defVal|` (selisih effAtk), dibebankan ke LP **pemilik attacker** (bukan defender).
+- **Port GameBoard `resolveAttackInPlace` (526-579):** faithful kedua sisi via param `attackerSide`:
+  - `aFront/aBack/dFront/dBack/ownGY/foeGY` + `getOwnLP/setOwnLP` (LP pemilik attacker) & `getOppLP/setOppLP` (LP defender) — diflip saat `attackerSide==='enemy'`.
+  - Branch `defVal>atkVal`: `setOwnLP(getOwnLP()-dmg)` → enemy attacker kalah ⇒ `g.eLP -= dmg`, pesan "Enemy take X". ✓ sama persis dengan `resolveAiCombat` 2153-2161.
+  - Branch `atkVal>defVal`: `setOppLP` ⇒ defender kena damage (enemy menang → player kena, pesan "You take X"). ✓
+  - `nc13` draw digate `attackerSide==='player'` (prototype juga player-only). ✓
+- **VERDIK: MEKANIK SAH — TUTUP, tidak perlu fix.** Jangan "dibenerin" di masa depan.
+
+### 9.4 Yang DI-SKIP / gap
+- Fusion AI: `applyAiMainPhase` tidak fusion (intentional, scope 6.7c-5 dasar).
+- Player-move / Teleport (tc01): belum di-port — lihat §gap di bawah. Tidak blocking 6.7c-5 (AI musuh tidak pakai move).
 
 ---
 
