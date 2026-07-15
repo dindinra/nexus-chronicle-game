@@ -110,14 +110,14 @@
         - **Counter-damage mechanic VERIFIKASI DEFINITIF — MEKANIK SAH (bukan bug):** saat attacker KALAH trade (`defVal > atkVal`), PEMILIK ATTACKER kena `|atkVal-defVal|` LP damage. Ada di prototype `resolveAttack` 1850-1863 (player) & `resolveAiCombat` 2153-2161 (enemy). `resolveAttackInPlace` GameBoard (526-579) faithful ter-port kedua sisi via param `attackerSide`. TUTUP.
         - **Gap player-move / Teleport (tc01):** tetap BELUM di-port (di luar scope 6.7c-5) — lihat NOTES_6.7c.md §gap.
         - [x] **6.7c-6** — Verifikasi final + commit — **FOLDED into 6.7c-5 wrap-up (2026-07-15)**: E2E browser (2.5 ronde, screenshot `screenshots/6.7c-5c-*.png`) + `npm test` 12/12 + commit code (`7ad4f8e`/`5ecbf3b`) & docs (STEP 4). 6.7c-5 tidak ada CSS/visual baru ⇒ §10 computed-style re-verify tidak perlu (UI sudah terverifikasi di 6.7c-1/4).
-        - [ ] 6.7d Efek kartu (1 kartu/step, cross-check PORTING_CHECKLIST.md) — nf03 & nc13 **TANYA USER dulu**
+        - [ ] 6.7d Efek kartu (1 kartu/step, cross-check PORTING_CHECKLIST.md) — nf03 & nc13 **DECIDED (lihat NOTES_6.7c.md §10)**
     - [ ] 6.7e AI lawan
 - [ ] Fase 7..10 — belum
 
-## Decisions Pending (jangan diputuskan sendiri)
-- **DECISION PENDING untuk nf03 & nc13** — tunggu keputusan user saat porting efek kartu di 6.7, **JANGAN** diasumsikan/diputuskan sendiri saat itu tiba, **WAJIB tanya dulu**.
-  - `nf03 Dragon Emperor`: summonFn placeholder (hanya sysMsg). `nc13 Celestia Seraph`: battle-win draw logic ada di resolveAttack.
-  - Detail di `PORTING_CHECKLIST.md` §10.
+## Decisions Taken (diambil user 2026-07-15 — lihat NOTES_6.7c.md §10)
+- **nf03 Dragon Emperor → OPSI A** (full effect destroy kolom mirror). BLOCKED sampai fusion system; desain LOCKED.
+- **nc13 Celestia Seraph → SIMETRIS** (enemy JUGA draw-on-win). DEVIASI DISENGAJA dari prototype player-only (alasan: fairness/simetri player-AI).
+- Detail & implementasi: `NOTES_6.7c.md` §10. Referensi efek asli: `PORTING_CHECKLIST.md` §10.
 
 ## Dokumen Referensi Visi (Arsip)
 - Dokumen referensi visi (Game Feel + Game Bible + Lore) tersimpan di docs/vision/nexus-chronicle-vision-reference.md. Bagian A (Game Feel) relevan untuk Fase 8 nanti. Bagian D (Game Bible/Lore) adalah visi jangka panjang untuk proyek Fase 2 setelah MVP selesai — TIDAK mempengaruhi scope Fase 1-10 yang sedang berjalan.
@@ -129,5 +129,5 @@
 - Semua logic game (efek kartu, AI, fusion, battle) saat ini **client-side JS** di dalam `index.html`.
 - **Opsi A (client-authoritative) SUDAH dikunci di Fase 0.2** — tidak perlu keputusan ulang sebelum Fase 4.
 - [x] TODO (2026-07-08): folder `C:\\c\\` & `C:\\e\\` (akibat bug path MSYS→Windows) **DIHAPUS TOTAL**.
-- **STATUS PROYEK (2026-07-15): 6.7c-5 SELESAI** (giliran musuh dasar: aiMainPhase + aiAttackSequence + wiring `startEnemyTurn`, terverifikasi E2E). Lanjut **6.7d (efek kartu)** — ingat **DECISION PENDING nf03 & nc13** (WAJIB tanya user).
-- **PICKUP (sesi berikutnya):** (1) Baca `PROGRESS.md` + `NOTES_6.7c.md` + `AGENT_RULES.md` untuk sync. (2) Langkah berikutnya = **6.7d (Efek kartu, 1 kartu/step)** — lihat `NOTES_6.7c.md`; **nf03 & nc13 WAJIB tanya user dulu** (DECISION PENDING). (3) `returnCard` SUDAH dihapus di 6.7c-4 — jangan kembalikan. (4) 6.7c-5 SUDAH SELESAI & di-push ke GitHub (`7ad4f8e`, `5ecbf3b`). (5) Counter-damage combat = mekanik sah (terverifikasi di prototype) — jangan "dibenerin".
+- **STATUS PROYEK (2026-07-15): 6.7c-5 SELESAI** (giliran musuh dasar: aiMainPhase + aiAttackSequence + wiring `startEnemyTurn`, terverifikasi E2E). Lanjut **6.7d (efek kartu)** — nf03 & nc13 **SUDAH DECIDED** (lihat NOTES_6.7c.md §10: nf03=Opsi A blocked on fusion; nc13=simetris, deviasi intentional).
+- **PICKUP (sesi berikutnya):** (1) Baca `PROGRESS.md` + `NOTES_6.7c.md` + `AGENT_RULES.md` untuk sync. (2) Langkah berikutnya = **6.7d (Efek kartu, 1 kartu/step)** — lihat `NOTES_6.7c.md` §10 (nf03 & nc13 SUDAH DECIDED). (3) `returnCard` SUDAH dihapus di 6.7c-4 — jangan kembalikan. (4) 6.7c-5 SUDAH SELESAI & di-push ke GitHub (`7ad4f8e`, `5ecbf3b`). (5) Counter-damage combat = mekanik sah (terverifikasi di prototype) — jangan "dibenerin".

@@ -16,7 +16,7 @@
 - **Vision (gemini-2.5-flash-lite, berbayar via openrouter)**: panggil HANYA saat user minta eksplisit "analisis pakai vision", JANGAN otomatis.
 - **STANDING RULE**: jangan delegate_task/subagents tanpa izin user. Kalau warning "sibling subagent" muncul saat file op: STOP, lapor & verifikasi git diff (selalu false-positive).
 - **PATH RULE (Windows+MSYS)**: untuk `write_file`/`patch` GUNAKAN absolute Windows path `C:\Users\Dindin\nexus-chronicle-game\...`. JANGAN pakai MSYS `/c/Users/...` untuk path di luar workspace root — rusak jadi `C:\c\Users\...`. Untuk terminal `cd`/`cp`/`rm`, MSYS `/c/...` aman.
-- **DECISION PENDING (nf03 & nc13)** — saat porting efek kartu di Fase 6.7d, WAJIB tanya user dulu: nf03 Dragon Emperor `summonFn` cuma placeholder (sysMsg, belum destroy kolom mirror); nc13 Celestia Seraph battle-win draw logic ada di `resolveAttack` (bukan `frontOnceFn`).
+- **DECISION nf03 & nc13 SUDAH DIAMBIL (2026-07-15)** — lihat NOTES_6.7c.md §10. nf03 = OPSI A (implementasi PENUH destroy kolom mirror, BLOCKED sampai fusion system; desain LOCKED). nc13 = SIMETRIS (enemy JUGA draw-on-win; DEVIASI DISENGAJA dari prototype player-only, alasan: fairness/simetri player-AI). Keduanya bukan lagi "pending tanya" — kerjakan langsung per §10 saat 6.7d.
 
 ---
 
@@ -219,6 +219,32 @@ Sumber: `newGame` 1226 → `showCoinFlip` 1236 → `afterCoin` 1250 → `startPl
 ### 9.4 Yang DI-SKIP / gap
 - Fusion AI: `applyAiMainPhase` tidak fusion (intentional, scope 6.7c-5 dasar).
 - Player-move / Teleport (tc01): belum di-port — lihat §gap di bawah. Tidak blocking 6.7c-5 (AI musuh tidak pakai move).
+
+---
+
+## 10. DECISION PENDING — RESOLVED (2026-07-15)
+
+Kedua kartu di bawah SUDAH diputuskan user secara eksplisit (2026-07-15). Bukan lagi "pending tanya" — langsung kerjakan per detail saat 6.7d.
+
+### 10.1 nf03 Dragon Emperor — OPSI A (implementasi PENUH, BLOCKED on Fusion)
+- **Keputusan:** OPSI A — bangun efek PENUH sesuai teks kartu asli: *"Summon: Destroy both enemy cards in the mirrored column."*
+- **Efek:** saat nf03 di-summon (via Fusion), HANCURKAN kedua kartu musuh di kolom sejajar dengan posisi nf03 (enemy front[col] + enemy back[col] → enemy GY), lalu `checkWin`. Bukan lagi placeholder `sysMsg`.
+- **Status:** **BLOCKED sampai sistem Fusion dibangun** (di luar scope 6.7c-5; kemungkinan bagian 6.7d atau fase fusion terpisah). `aiMainPhase` 6.7c-5 sengaja skip fusion (demo state belum punya data fusion).
+- **Desain LOCKED:** begitu fusion system ready, ini yang HARUS dibangun (OPSI A). Tidak lagi "DECISION PENDING".
+- **Hook:** prototype `doFusion` (index.html 2507) memanggil `fc.summonFn(G)` (2524) — letakkan logika destroy di `summonFn` nf03. `doFusionAI` (2536) untuk enemy fusion (juga panggil summonFn ⇒ enemy nf03 otomatis dapat efek sama).
+- **Referensi:** PORTING_CHECKLIST.md §10 (nf03 line 87/253/263); prototype `eff` 1000 + `summonFn` 1001.
+
+### 10.2 nc13 Celestia Seraph — SIMETRIS (draw-on-win KEDUA sisi, DEVIASI dari prototype)
+- **Keputusan:** buat SIMETRIS — **musuh JUGA dapat tarik 1 kartu tambahan kalau menang pertarungan** (bukan cuma pemain seperti prototype asli).
+- **DEVIASI DISENGAJA dari prototype:** prototype asli `resolveAttack` 1842 hanya draw untuk player (`if(gs.atkSrc.card.id==='nc13'){drawOne(gs);}`); `resolveAiCombat` TIDAK draw. Keputusan user = ubah jadi kedua sisi.
+- **Alasan deviasi:** keputusan desain user untuk membuat mekanik lebih adil/simetris antara player ↔ AI.
+- **Status:** **SIAP dikerjakan langsung di 6.7d** (tidak butuh fusion).
+- **Implementasi di GameBoard `resolveAttackInPlace` (526-579):** saat ini draw di-gate `attackerSide==='player'` (line 556). Untuk simetris, **hapus gate side** (atau `|| attackerSide==='enemy'`) supaya kedua sisi draw saat menang. Pastikan: (a) hanya branch `atkVal>defVal` (menang), (b) cek `g.pDeck.length>0 && g.pHand.length<HAND_LIMIT` (sudah ada), (c) ⚠️ PERIKSA enemy draw: prototype player draw pakai `drawOne(gs)` → `pHand`. Untuk enemy attacker, BUTUH draw ke hand musuh (`eHand`/`eDeck`?) — prototype TIDAK punya enemy draw, jadi ini BUTUH desain baru. Agent HARUS cek struktur state enemy hand/deck sebelum implementasi.
+- **Catatan porting:** efek nc13 TIDAK di `frontOnceFn` (frontOnceFn cuma +10 LP heal). Draw-on-win ada di combat resolution (resolveAttack) — kasus khusus, jangan terlewat saat porting efek kartu rapi di 6.7d.
+- **Referensi:** PORTING_CHECKLIST.md §10 (nc13 line 59/254/264); prototype 929-930 (data) + 1842 (draw logic).
+
+### 10.3 Catatan pelaporan (binding rule)
+- Dua keputusan dilaporkan & disetujui user SECARA EKSPLISIT → memenuhi binding rule "kalau ada deviasi dari prototype, WAJIB dilaporkan dulu". nc13 = deviasi intentional (dicatat jelas di sini + PROGRESS.md). Status: SUDAH dilaporkan & disetujui.
 
 ---
 
