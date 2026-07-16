@@ -110,7 +110,10 @@
         - **Counter-damage mechanic VERIFIKASI DEFINITIF — MEKANIK SAH (bukan bug):** saat attacker KALAH trade (`defVal > atkVal`), PEMILIK ATTACKER kena `|atkVal-defVal|` LP damage. Ada di prototype `resolveAttack` 1850-1863 (player) & `resolveAiCombat` 2153-2161 (enemy). `resolveAttackInPlace` GameBoard (526-579) faithful ter-port kedua sisi via param `attackerSide`. TUTUP.
         - **Gap player-move / Teleport (tc01):** tetap BELUM di-port (di luar scope 6.7c-5) — lihat NOTES_6.7c.md §gap.
         - [x] **6.7c-6** — Verifikasi final + commit — **FOLDED into 6.7c-5 wrap-up (2026-07-15)**: E2E browser (2.5 ronde, screenshot `screenshots/6.7c-5c-*.png`) + `npm test` 12/12 + commit code (`7ad4f8e`/`5ecbf3b`) & docs (STEP 4). 6.7c-5 tidak ada CSS/visual baru ⇒ §10 computed-style re-verify tidak perlu (UI sudah terverifikasi di 6.7c-1/4).
-        - [ ] 6.7d Efek kartu (1 kartu/step, cross-check PORTING_CHECKLIST.md) — nf03 & nc13 **DECIDED (lihat NOTES_6.7c.md §10)**
+        - [x] **6.7d Efek kartu (1 kartu/step, cross-check PORTING_CHECKLIST.md)** — nf03 & nc13 **DECIDED (NOTES_6.7c.md §10)**
+          - ⚠️ **Pre-req KOREKSI BUG (2026-07-15):** demo LP 80 → `MAX_LP` (50) di `buildDemoState` (NOTES_6.7c.md §11). Faithful ke prototype; bikin `decideAiHeal` reachable + nc13 heal benar. `tsc` juga dibersihkan (hapus unused `Row` import di `aiMainPhase.test.ts`).
+          - [x] **6.7d-1 nc13 Celestia Seraph** — **SELESAI & terverifikasi (2026-07-16)**. (a) Battle-win Draw 1 **SIMETRIS** via `applyNc13WinDraw` (src/engine/ai.ts) — 4 vitest test. (b) `frontOnceFn` +10 LP (player-only, prototype 932) di-inject di load effect. `npm test` **19/19**, `tsc -b` bersih, E2E smoke `6.7d-nc13-heal-verification.png` (baseline 50/50 intact, 0 console error). NOTES §12. **Catatan E2E:** buildDemoState TIDAK diubah (baseline shared 50/50 dipertahankan); skenario heal normal (+10 dari LP<50) & cap (di MAX_LP) dibuktikan kuat lewat 3 unit test nc13.test.ts, E2E cukup buktikan integrasi tanpa crash + cap behavior.
+          - [ ] 6.7d-2.. nf03 Dragon Emperor — **BLOCKED** (butuh Fusion; Opsi A locked). Jangan disentuh.
     - [ ] 6.7e AI lawan
 - [ ] Fase 7..10 — belum
 
@@ -131,3 +134,9 @@
 - [x] TODO (2026-07-08): folder `C:\\c\\` & `C:\\e\\` (akibat bug path MSYS→Windows) **DIHAPUS TOTAL**.
 - **STATUS PROYEK (2026-07-15): 6.7c-5 SELESAI** (giliran musuh dasar: aiMainPhase + aiAttackSequence + wiring `startEnemyTurn`, terverifikasi E2E). Lanjut **6.7d (efek kartu)** — nf03 & nc13 **SUDAH DECIDED** (lihat NOTES_6.7c.md §10: nf03=Opsi A blocked on fusion; nc13=simetris, deviasi intentional).
 - **PICKUP (sesi berikutnya):** (1) Baca `PROGRESS.md` + `NOTES_6.7c.md` + `AGENT_RULES.md` untuk sync. (2) Langkah berikutnya = **6.7d (Efek kartu, 1 kartu/step)** — lihat `NOTES_6.7c.md` §10 (nf03 & nc13 SUDAH DECIDED). (3) `returnCard` SUDAH dihapus di 6.7c-4 — jangan kembalikan. (4) 6.7c-5 SUDAH SELESAI & di-push ke GitHub (`7ad4f8e`, `5ecbf3b`). (5) Counter-damage combat = mekanik sah (terverifikasi di prototype) — jangan "dibenerin".
+
+## ⏸️ PAUSE CHECKPOINT (2026-07-16)
+- **6.7d-1 (nc13 Celestia Seraph) SELESAI & DI-PUSH** → commit `4a75e46` (+ docs commit terpisah). `npm test` **19/19 pass**. Working tree BERSIH kecuali 9 PNG `backend/static/cards/*.png` (revisi art manual user, by-design, jangan di-commit/revert).
+- **PAUSE:** user mau tinggal proyek ini (kerjakan proyek lain). Semua sudah di-push ke `origin/master` — aman ditinggal.
+- **NEXT STEP (saat dilanjut):** lanjut **6.7d kartu berikutnya** (belum ditentukan — pilih dari PORTING_CHECKLIST.md §10, SKIP nf03 karena BLOCKED on Fusion). Sebelum mulai: jalanin `sync-check` skill + `npm test` + `git status` dulu.
+- **JANGAN lupa saat resume:** `buildDemoState` baseline shared = LP 50/50 (MAX_LP), nc13 di `pDeck`. Jangan ubah baseline demi 1 skenario E2E — buktikan via unit test, E2E cukup smoke/integration.

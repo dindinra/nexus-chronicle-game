@@ -250,3 +250,47 @@ Kedua kartu di bawah SUDAH diputuskan user secara eksplisit (2026-07-15). Bukan 
 
 ## Gap Diketahui: Player-move / Teleport (tc01) belum di-port
 Ditemukan saat investigasi 6.7c-5b (row ATK/DEF): prototype punya mekanisme drag-drop move kartu antar row/slot (slotDrop, prototype 1653-1686) + Tactic tc01 Teleport (free move, prototype 945-947). Field _freeTeleport sudah dideklarasi di GameBoard.tsx (86/118/179) tapi BELUM ada handler drag-drop/aktivasi Teleport di UI player. Ini di luar scope 6.7c-5 (AI musuh tidak pakai move sebagai strategi, jadi tidak blocking). Perlu di-port di fase mendatang (kemungkinan 6.7d atau fase terpisah) sebelum player bisa pakai kartu tc01 Teleport secara fungsional.
+
+---
+
+## 11. KOREKSI BUG — Demo LP 80 vs MAX_LP 50 (2026-07-15)
+
+**Apa bug-nya:**
+- Prototype `initGame` mulai LP di `MAX_LP = 50` (index.html:862 konstanta, :1102 `pLP:MAX_LP, eLP:MAX_LP`) — itu nilai ASLI yang mengikat.
+- Demo React `buildDemoState` (GameBoard.tsx:146-147) hardcode `pLP: 80, eLP: 80` — **deviasi dari prototype**, kemungkinan leftover dari testing UI 6.7a/b (nilai 80 dipakai cek render badge, tidak pernah dikoreksi ke 50).
+- Konstanta `MAX_LP = 50` SUDAH benar & resmi sejak STEP 1 (6.7c-5a, `src/engine/ai.ts:15`) — dipakai `decideAiHeal` (threshold `HEAL_THRESHOLD = MAX_LP*0.4 = 20`). Yang SALAH adalah data demo (80), bukan konstanta.
+
+**Dampaknya:**
+- `decideAiHeal` secara matematis MUSTAHIL ke-trigger di demo: eLP start 80, threshold 20 → butuh damage 60+ sebelum musuh sempat heal; di practice gak pernah kecapai di gameplay normal. Healing AI efektif MATI di demo.
+- nc13 `frontOnceFn` (`G.pLP = Math.min(MAX_LP, G.pLP+10)`) kalau di-port pakai `MAX_LP=50` di state 80 → heal malah CAP pLP ke 50 (LP TURUN 80→50) — bug saat porting efek kartu 6.7d.
+- Verifikasi 6.7c-5 (E2E) kebetulan lolos karena cuma cek LP turun 80→79 (threshold jauh di bawah 80), tidak tersentuh bug ini.
+
+**Koreksi (2026-07-15):**
+- `GameBoard.tsx` buildDemoState: `pLP: 80, eLP: 80` → `pLP: MAX_LP, eLP: MAX_LP` (impor `MAX_LP` ditambah ke import line 22 dari `../engine/ai`). Single source of truth = konstanta resmi.
+- Tidak ada test/fixture lain yang hardcode 80 (grep `pLP: *80|eLP: *80` hanya di buildDemoState). Verify script & vitest TIDAK assert LP=80.
+- `npm test` 12/12 tetap PASS (tanpa regresi). `tsc` bersih untuk perubahan ini. (Catatan terpisah: ada 1 error pre-existing di `aiMainPhase.test.ts:2` — `'Row' is declared but never used` — di file test yg TIDAK diubah; bukan regresi LP fix, tidak diblokir.)
+- E2E: reload `/game` → badge LP kedua sisi = **50** (konfirmasi via `browser_console` `['50','50']` + Playwright headless). Screenshot bukti: `screenshots/6.7c-5-fix-lp-baseline.png`.
+
+**Status:** SELESAI & terverifikasi. Ini KOREKSI BUG (bukan fitur baru) — langkah pra-syarat SEBELUM porting efek kartu nc13 di 6.7d.
+
+---
+
+## 12. 6.7d — Implementasi Efek Kartu (nc13 Celestia Seraph, 2026-07-15)
+
+**Kartu:** nc13 Celestia Seraph — `eff:'Front/once: Restore 10 LP. Battle-win: Draw 1 card.'` (prototype 929-931).
+
+**Scope (putusan user):** bundle lengkap — draw SIMETRIS + `frontOnceFn` +10 LP (player-only, faithful). Lihat §10.2 / §10.3 (nc13 = deviasi intentional simetris, disetujui).
+
+**Implementasi:**
+- **Battle-win Draw 1 (SIMETRIS):** prototype 1842 `if(gs.atkSrc.card.id==='nc13'){drawOne(gs);}` (player-only). Dibuat simetris di `resolveAttackInPlace` (GameBoard.tsx:556) → panggil helper `applyNc13WinDraw(gs, attackerSide)` (src/engine/ai.ts). Helper reuse primitive `applyEnemyTurnStart` (enemy draw di turn-start): player → `pDeck→pHand`, enemy → `eDeck→eHand`, keduanya gate `HAND_LIMIT=6`. Satu combat resolver (di-reuse player=`execAttack`, enemy=`aiAttack`), tidak ada duplikasi.
+- **Front/once +10 LP (player-only):** prototype 932 `G.pLP=Math.min(MAX_LP,G.pLP+10)`. Karena backend `cards.json` TIDAK punya fungsi JS, `frontOnceFn` di-inject di client (load effect `getCards()` → `cs.map` → nc13 dapat `frontOnceFn:(g)=>{g.pLP=Math.min(MAX_LP,g.pLP+10)}`). Dipanggil otomatis saat summon ke front (GameBoard.tsx:720, guard `_frontOnceUsed`).
+
+**Verifikasi:**
+- `npm test` **19/19** (termasuk 7 test `src/engine/__tests__/nc13.test.ts`: 4 draw simetris + 3 heal: normal 30→40, cap 45→50, enemy-summon-no-heal).
+- `tsc -b` **bersih** (juga hapus pre-existing unused `Row` import di `aiMainPhase.test.ts`).
+- E2E smoke (`frontend/e2e_nc13_heal.mjs`): `/game` load, **baseline LP 50/50 intact** (buildDemoState TIDAK diubah), **0 console error**, screenshot `screenshots/6.7d-nc13-heal-verification.png`. Skenario "heal +10 dari LP<50" & "cap di MAX_LP" dibuktikan kuat lewat 3 unit test heal — E2E cukup buktikan integrasi tanpa crash + cap behavior benar (LP sudah 50 → heal di-cap, DELTA=0 = behavior benar, bukan bug).
+- Catatan: `decideAiHeal` sekarang reachable (LP demo 50, threshold 20) — lihat §11.
+
+**File berubah:** `src/engine/ai.ts` (HAND_LIMIT + applyNc13WinDraw + applyNc13Heal), `src/pages/GameBoard.tsx` (import + line 556 + load-effect injection + LP→MAX_LP), `src/engine/__tests__/nc13.test.ts` (baru), `src/engine/__tests__/aiMainPhase.test.ts` (hapus unused Row), `frontend/e2e_nc13_heal.mjs` (baru).
+
+**Status:** SELESAI & terverifikasi. **DI-COMMIT** (`4a75e46`, 2026-07-16) + **DI-PUSH** ke `origin/master`. PAUSE CHECKPOINT: proyek aman ditinggal. Next = 6.7d kartu berikutnya (nf03 BLOCKED on Fusion).
