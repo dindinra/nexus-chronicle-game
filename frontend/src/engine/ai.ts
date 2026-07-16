@@ -20,6 +20,32 @@ export const BACK_PREF_IDS = ['nc03', 'nc08']; // kartu yg prefer Back Row
 export const MAX_SUMMONS = 6;
 export const MAX_TRAPS = 3;
 
+// HAND_LIMIT dari prototype line 863 (global const; React GameState tdk punya field ini).
+export const HAND_LIMIT = 6;
+
+// nc13 Celestia Seraph — "Battle-win: Draw 1 card" (SIMETRIS, NOTES_6.7c.md §10.2).
+// Prototype asli player-only (index.html:1842); user putuskan SIMETRIS (enemy JUGA draw).
+// Reuse primitive yg sama dgn applyEnemyTurnStart (enemy draw di turn-start).
+export function applyNc13WinDraw(gs: GameState, attackerSide: 'player' | 'enemy'): void {
+  if (attackerSide === 'player') {
+    if (gs.pDeck.length > 0 && gs.pHand.length < HAND_LIMIT) {
+      gs.pHand.push({ ...gs.pDeck[0] });
+      gs.pDeck = gs.pDeck.slice(1);
+    }
+  } else {
+    if (gs.eDeck.length > 0 && gs.eHand.length < HAND_LIMIT) {
+      gs.eHand.push({ ...gs.eDeck[0] });
+      gs.eDeck = gs.eDeck.slice(1);
+    }
+  }
+}
+
+// nc13 Celestia Seraph — "Front/once: Restore 10 LP" (player-only, prototype 932).
+// Faithful: G.pLP = Math.min(MAX_LP, G.pLP + 10). Player-only (keputusan user §10.2).
+export function applyNc13Heal(gs: GameState): void {
+  gs.pLP = Math.min(MAX_LP, gs.pLP + 10);
+}
+
 // Lookup apakah sebuah card id adalah material fusion (untuk prioritas sort).
 // Default: tidak ada (fusion execution di-skip). React mengisi dari DEMO_FUSIONS.
 export type FusionMaterialLookup = (cardId: string) => boolean;

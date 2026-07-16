@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getCards } from '../api/cards';
 import type { Card, Fusion } from '../types/cards';
 import type { BoardCard, BoardRow, FusionInstance, GameState } from '../types/game';
-import { applyAiMainPhase, decideAiAttackTarget, type FusionMaterialLookup } from '../engine/ai';
+import { MAX_LP, applyNc13WinDraw, applyNc13Heal, applyAiMainPhase, decideAiAttackTarget, type FusionMaterialLookup } from '../engine/ai';
 import { CardView } from '../components/CardView';
 
 // Batas hand (prototype HAND_LIMIT = 6, baris 863). drawOne() skip bila >= limit.
@@ -143,8 +143,8 @@ function buildDemoState(cards: Card[]): GameState {
     phase: 'draw',
     firstTurn: true,
     playerHasMoved: false,
-    pLP: 80,
-    eLP: 80,
+    pLP: MAX_LP,
+    eLP: MAX_LP,
     pEnergy: 0,
     pEnergyMax: 0,
     pTurnCount: 0,
@@ -477,8 +477,15 @@ export default function GameBoard() {
     _gameInited = true;
     getCards()
       .then((cs) => {
-        setCards(cs);
-        setGs(buildDemoState(cs));
+        // 6.7d nc13: pasang efek di client (backend cards.json tanpa fungsi JS).
+        // frontOnceFn = +10 LP (player-only, faithful prototype index.html:932).
+        const withEffects = cs.map((c) =>
+          c.id === 'nc13'
+            ? { ...c, frontOnceFn: (g: GameState) => applyNc13Heal(g) }
+            : c,
+        );
+        setCards(withEffects);
+        setGs(buildDemoState(withEffects));
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
   }, []);
@@ -553,7 +560,7 @@ export default function GameBoard() {
     if (atkVal > defVal) {
       const dmg = atkVal - defVal;
       if (!target.indestructible) { dRow[targetIdx] = null; foeGY.push(target); }
-      if (src.card.id === 'nc13' && attackerSide === 'player') { if (g.pDeck.length > 0 && g.pHand.length < HAND_LIMIT) { g.pHand.push({ ...g.pDeck[0] }); g.pDeck = g.pDeck.slice(1); } }
+      if (src.card.id === 'nc13') { applyNc13WinDraw(g, attackerSide); }
       setOppLP(Math.max(0, getOppLP() - dmg));
       setMsg(`${attName} (${atkVal}) destroyed ${defName} (${defVal})! ${attackerSide === 'player' ? 'Enemy' : 'You'} take ${dmg} LP damage.`);
     } else if (defVal > atkVal) {

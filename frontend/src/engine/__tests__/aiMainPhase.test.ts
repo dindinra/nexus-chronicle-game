@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { BoardCard, GameState, Row, BoardRow } from '../../types/game';
+import type { BoardCard, GameState, BoardRow } from '../../types/game';
 import type { CardType } from '../../types/cards';
 import {
   applyAiMainPhase,
